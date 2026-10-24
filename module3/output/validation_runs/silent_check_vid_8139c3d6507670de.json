@@ -1,0 +1,173 @@
+{
+  "schema_version": "3.1.0",
+  "status": "ok",
+  "message": "Found 1 relevant video segment(s).",
+  "results": [
+    {
+      "video_id": "vid_8139c3d6507670de",
+      "video_filename": "sample_silent_clip.mkv",
+      "start_seconds": 0.0,
+      "end_seconds": 3.0,
+      "start_formatted": "00:00:00",
+      "end_formatted": "00:00:03",
+      "span_type": "approx_from_frame",
+      "final_score": 0.9876,
+      "visual_score": 0.9876,
+      "text_score": null,
+      "visual_raw_cosine": 0.1877,
+      "text_raw_cosine": null,
+      "modalities": [
+        "visual"
+      ],
+      "reason": "Visual match: frame features align with query (0.99).",
+      "seek_seconds": 0.0,
+      "video_path": "C:\\Users\\Lenovo\\Desktop\\Final Project\\module1\\input\\videos\\sample_silent_clip.mkv",
+      "matched_at_seconds": 0.0,
+      "transcript_text": null,
+      "frame_id": "vid_8139c3d6507670de_frame_00000",
+      "frame_path": "C:\\Users\\Lenovo\\Desktop\\Final Project\\module1\\output\\frames\\vid_8139c3d6507670de\\frame_0000_0.000s.jpg",
+      "rrf_score": 0.00952,
+      "video_file_exists": true,
+      "resolution_seconds": 2.0
+    }
+  ],
+  "timings_ms": {
+    "query_encode_visual_ms": 132.31,
+    "query_encode_text_ms": 18.4,
+    "search_visual_ms": 7.63,
+    "search_text_ms": 4.0,
+    "calibrate_fuse_ms": 1.06,
+    "segment_build_ms": 0.32,
+    "total_ms": 163.76
+  },
+  "debug": {
+    "query": "SMPTE color bars test pattern with vertical colored bars",
+    "top_k": 5,
+    "video_ids": [
+      "vid_8139c3d6507670de"
+    ],
+    "cache_hit_visual": false,
+    "cache_hit_text": false,
+    "cache_hits_visual": 0,
+    "cache_hits_text": 0,
+    "visual_load_count": 1,
+    "text_load_count": 1,
+    "models_reused": true,
+    "index_reused": true,
+    "degraded_modalities": [],
+    "best_rejected_candidates": [],
+    "trace": {
+      "query_received": "SMPTE color bars test pattern with vertical colored bars",
+      "query_normalised": "smpte color bars test pattern with vertical colored bars",
+      "modalities": {
+        "visual": {
+          "searched": true,
+          "reason": "active",
+          "candidate_count": 3
+        },
+        "text": {
+          "searched": true,
+          "reason": "active",
+          "candidate_count": 0
+        }
+      },
+      "top_raw_hits": {
+        "visual": [
+          {
+            "vector_id": 2,
+            "frame_id": "vid_8139c3d6507670de_frame_00001",
+            "video_filename": "sample_silent_clip.mkv",
+            "timestamp_seconds": 2.0,
+            "span": [
+              1.0,
+              3.0
+            ],
+            "raw_cosine": 0.1877,
+            "calibrated_score": 0.9876
+          },
+          {
+            "vector_id": 3,
+            "frame_id": "vid_8139c3d6507670de_frame_00002",
+            "video_filename": "sample_silent_clip.mkv",
+            "timestamp_seconds": 4.0,
+            "span": [
+              3.0,
+              5.0
+            ],
+            "raw_cosine": 0.1877,
+            "calibrated_score": 0.9876
+          },
+          {
+            "vector_id": 1,
+            "frame_id": "vid_8139c3d6507670de_frame_00000",
+            "video_filename": "sample_silent_clip.mkv",
+            "timestamp_seconds": 0.0,
+            "span": [
+              0.0,
+              1.0
+            ],
+            "raw_cosine": 0.1877,
+            "calibrated_score": 0.9876
+          }
+        ],
+        "text": []
+      },
+      "gate_decisions": {
+        "visual_gate": {
+          "metric": "calibrated_prob",
+          "threshold": 0.15,
+          "passed_count": 3,
+          "rejected_count": 0
+        },
+        "text_gate": {
+          "metric": "raw_cosine",
+          "threshold": 0.22,
+          "passed_count": 0,
+          "rejected_count": 0
+        },
+        "rejected_candidates": []
+      },
+      "linking_and_fusion": [
+        {
+          "video_filename": "sample_silent_clip.mkv",
+          "span": [
+            0.0,
+            3.0
+          ],
+          "span_type": "approx_from_frame",
+          "visual_score": 0.9876,
+          "text_score": null,
+          "final_fused_score": 0.9876,
+          "rrf_score": 0.0095,
+          "reason": "Visual match: frame features align with query (0.99)."
+        }
+      ],
+      "final_ranking": [
+        {
+          "rank": 1,
+          "video_filename": "sample_silent_clip.mkv",
+          "start_seconds": 0.0,
+          "end_seconds": 3.0,
+          "final_score": 0.9876,
+          "modalities": [
+            "visual"
+          ],
+          "span_type": "approx_from_frame"
+        }
+      ]
+    },
+    "modality_available": {
+      "visual": true,
+      "text": true
+    },
+    "candidates_retrieved": {
+      "visual_pool_count": 3,
+      "text_pool_count": 0
+    },
+    "candidates_passed_gating": {
+      "visual_passed": 3,
+      "text_passed": 0
+    }
+  },
+  "notices": []
+}

@@ -1,0 +1,26 @@
+========================================================================
+FUSION COMPARISON REPORT: NOISY-OR (BEFORE) VS WEIGHTED (AFTER)
+========================================================================
+
+QUERY: "What are scoped values in Java and how are they better than ThreadLocal?"
+------------------------------------------------------------------------
+Rank  | Noisy-OR (Before)              | Score    | Weighted (After)               | Score   
+------------------------------------------------------------------------
+1     | videoplayback.mp4 [00:00:00-00:00:05] | 1.0000   | videoplayback.mp4 [00:00:00-00:00:05] | 1.0000  
+2     | videoplayback.mp4 [00:00:08-00:00:14] | 0.9996   | videoplayback.mp4 [00:00:08-00:00:14] | 0.9542  
+3     | videoplayback.mp4 [00:00:20-00:00:26] | 0.8845   | videoplayback.mp4 [00:00:20-00:00:26] | 0.6468  
+4     | videoplayback.mp4 [00:00:05-00:00:08] | 0.3603   | videoplayback.mp4 [00:00:05-00:00:08] | 0.3603  
+5     | videoplayback.mp4 [00:00:14-00:00:19] | 0.1392   | videoplayback.mp4 [00:00:14-00:00:19] | 0.1392  
+
+QUERY: "a purple title card that says Java 25 Feature Highlight"
+------------------------------------------------------------------------
+Rank  | Noisy-OR (Before)              | Score    | Weighted (After)               | Score   
+------------------------------------------------------------------------
+1     | videoplayback.mp4 [00:00:00-00:00:05] | 0.9640   | videoplayback.mp4 [00:00:00-00:00:05] | 0.6786  
+2     | videoplayback.mp4 [00:00:20-00:00:26] | 0.3792   | videoplayback.mp4 [00:00:20-00:00:26] | 0.3792  
+
+QUERY: "slide with the heading Code Example"
+------------------------------------------------------------------------
+Rank  | Noisy-OR (Before)              | Score    | Weighted (After)               | Score   
+------------------------------------------------------------------------
+1     | videoplayback.mp4 [00:00:19-00:00:25] | 0.4340   | videoplayback.mp4 [00:00:19-00:00:25] | 0.4340  

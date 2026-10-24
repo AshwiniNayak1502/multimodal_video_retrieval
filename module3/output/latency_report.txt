@@ -1,0 +1,59 @@
+========================================================================
+MODULE 3 RETRIEVAL ENGINE LATENCY & TELEMETRY BENCHMARK REPORT
+Timestamp: 2026-10-21 15:40:59
+Iterations per query: 5
+Test queries (6):
+  [1] "What are scoped values in Java and how are they better than ThreadLocal?"
+  [2] "a purple title card that says Java 25 Feature Highlight"
+  [3] "slide with the heading Code Example"
+  [4] "Welcome to the Multimodal Video Retrieval Project"
+  [5] "recipe for baking sourdough bread"
+  [6] "underwater scuba diving with dolphins"
+========================================================================
+QueryService init (lazy models, warmup=False): 12.80 ms
+------------------------------------------------------------------------
+
+1. COLD EXECUTION LATENCY (Uncached, First Encounter)
+------------------------------------------------------------------------
+Stage                               | Query 1 (Cold Models) | Cold Mean (Q1..QN)
+------------------------------------------------------------------------
+Query Encode Visual (SigLIP2)       |          28205.05 ms |      4817.04 ms
+Query Encode Text (MiniLM)          |           2012.73 ms |       347.12 ms
+FAISS Visual Search (IndexFlatIP)   |             26.34 ms |        26.12 ms
+FAISS Text Search (IndexFlatIP)     |              8.68 ms |         8.19 ms
+Relevance Gating & Calibration      |              3.92 ms |         3.85 ms
+Segment Assembly & Ranking          |              1.22 ms |         0.42 ms
+Total End-to-End Search             |          30258.02 ms |      5202.80 ms
+
+2. WARM EXECUTION LATENCY (LRU Query Cache Active, N=30)
+------------------------------------------------------------------------
+Stage                               | Min (ms)  | Mean (ms) | P95 (ms)  | Max (ms) 
+------------------------------------------------------------------------
+Query Encode Visual (SigLIP2)       |      0.01 |      0.01 |      0.02 |      0.03
+Query Encode Text (MiniLM)          |      0.00 |      0.00 |      0.01 |      0.02
+FAISS Visual Search (IndexFlatIP)   |     24.45 |     29.07 |     30.26 |     30.37
+FAISS Text Search (IndexFlatIP)     |      7.29 |      8.62 |      9.15 |      9.48
+Relevance Gating & Calibration      |      3.06 |      4.16 |      4.59 |      4.62
+Segment Assembly & Ranking          |      0.03 |      0.47 |      1.25 |      1.36
+Total End-to-End Search             |     35.87 |     42.38 |     44.22 |     44.26
+
+3. MODEL & INDEX REUSE TELEMETRY
+------------------------------------------------------------------------
+Visual Model Load Count: 1 (Must be <= 1 for single-process session)
+Text Model Load Count:   1 (Must be <= 1 for single-process session)
+Models Reused Flag:      True
+Index Reused Flag:       True
+Query Cache Hits Visual: 30 / 36
+Query Cache Hits Text:   30 / 36
+
+4. QUERY-BY-QUERY SUMMARY (Cold vs Warm Average)
+------------------------------------------------------------------------
+Query Snippet                            | Status   | Cold Total | Warm Total
+------------------------------------------------------------------------
+What are scoped values in Java and how   | ok       | 30258.02 ms |    42.74 ms
+a purple title card that says Java 25    | ok       |   207.55 ms |    41.74 ms
+slide with the heading Code Example      | ok       |   191.82 ms |    42.08 ms
+Welcome to the Multimodal Video Retrie   | ok       |   188.07 ms |    41.94 ms
+recipe for baking sourdough bread        | no_match |   185.93 ms |    42.68 ms
+underwater scuba diving with dolphins    | no_match |   185.42 ms |    43.07 ms
+========================================================================

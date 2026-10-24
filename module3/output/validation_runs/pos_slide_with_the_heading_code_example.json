@@ -1,0 +1,413 @@
+{
+  "schema_version": "3.1.0",
+  "status": "ok",
+  "message": "Found 1 relevant video segment(s).",
+  "results": [
+    {
+      "video_id": "vid_e9f58d28adfac07e",
+      "video_filename": "videoplayback.mp4",
+      "start_seconds": 19.0,
+      "end_seconds": 25.0,
+      "start_formatted": "00:00:19",
+      "end_formatted": "00:00:25",
+      "span_type": "approx_from_frame",
+      "final_score": 0.434,
+      "visual_score": 0.434,
+      "text_score": null,
+      "visual_raw_cosine": 0.1465,
+      "text_raw_cosine": null,
+      "modalities": [
+        "visual"
+      ],
+      "reason": "Visual match: frame features align with query (0.43).",
+      "seek_seconds": 18.0,
+      "video_path": "C:\\Users\\Lenovo\\Desktop\\Final Project\\module1\\input\\videos\\videoplayback.mp4",
+      "matched_at_seconds": 22.0,
+      "transcript_text": null,
+      "frame_id": "vid_e9f58d28adfac07e_frame_00011",
+      "frame_path": "C:\\Users\\Lenovo\\Desktop\\Final Project\\module1\\output\\frames\\vid_e9f58d28adfac07e\\frame_0011_22.000s.jpg",
+      "rrf_score": 0.00984,
+      "video_file_exists": true,
+      "resolution_seconds": 2.0
+    }
+  ],
+  "timings_ms": {
+    "query_encode_visual_ms": 149.77,
+    "query_encode_text_ms": 19.2,
+    "search_visual_ms": 24.66,
+    "search_text_ms": 8.07,
+    "calibrate_fuse_ms": 3.94,
+    "segment_build_ms": 0.62,
+    "total_ms": 206.31
+  },
+  "debug": {
+    "query": "slide with the heading Code Example",
+    "top_k": 5,
+    "video_ids": null,
+    "cache_hit_visual": false,
+    "cache_hit_text": false,
+    "cache_hits_visual": 0,
+    "cache_hits_text": 0,
+    "visual_load_count": 1,
+    "text_load_count": 1,
+    "models_reused": true,
+    "index_reused": true,
+    "degraded_modalities": [],
+    "best_rejected_candidates": [
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 10.0,
+        "raw_cosine": 0.1323,
+        "calibrated_score": 0.134,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.1340) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 8.0,
+        "raw_cosine": 0.1323,
+        "calibrated_score": 0.134,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.1340) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 6.0,
+        "raw_cosine": 0.1323,
+        "calibrated_score": 0.134,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.1340) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 14.0,
+        "raw_cosine": 0.1321,
+        "calibrated_score": 0.1315,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.1315) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 12.0,
+        "raw_cosine": 0.1321,
+        "calibrated_score": 0.1315,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.1315) < visual_min_prob (0.1500)"
+      }
+    ],
+    "trace": {
+      "query_received": "slide with the heading Code Example",
+      "query_normalised": "slide with the heading code example",
+      "modalities": {
+        "visual": {
+          "searched": true,
+          "reason": "active",
+          "candidate_count": 21
+        },
+        "text": {
+          "searched": true,
+          "reason": "active",
+          "candidate_count": 7
+        }
+      },
+      "top_raw_hits": {
+        "visual": [
+          {
+            "vector_id": 19,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00011",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 22.0,
+            "span": [
+              21.0,
+              23.0
+            ],
+            "raw_cosine": 0.1465,
+            "calibrated_score": 0.434
+          },
+          {
+            "vector_id": 21,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00013",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 26.0,
+            "span": [
+              25.0,
+              27.0
+            ],
+            "raw_cosine": 0.1465,
+            "calibrated_score": 0.434
+          },
+          {
+            "vector_id": 20,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00012",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 24.0,
+            "span": [
+              23.0,
+              25.0
+            ],
+            "raw_cosine": 0.1465,
+            "calibrated_score": 0.434
+          },
+          {
+            "vector_id": 18,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00010",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 20.0,
+            "span": [
+              19.0,
+              21.0
+            ],
+            "raw_cosine": 0.1463,
+            "calibrated_score": 0.4284
+          },
+          {
+            "vector_id": 17,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00009",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 18.0,
+            "span": [
+              17.0,
+              19.0
+            ],
+            "raw_cosine": 0.1463,
+            "calibrated_score": 0.4284
+          }
+        ],
+        "text": [
+          {
+            "vector_id": 6,
+            "segment_id": 3,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 14.51,
+            "end_timestamp": 19.935,
+            "raw_cosine": 0.1953,
+            "calibrated_score": 0.0,
+            "transcript_text": "Just define a scoped value, assign it temporarily, and use i"
+          },
+          {
+            "vector_id": 2,
+            "segment_id": 1,
+            "video_filename": "sample_presentation.mp4",
+            "start_timestamp": 3.859,
+            "end_timestamp": 7.988,
+            "raw_cosine": 0.1604,
+            "calibrated_score": 0.0,
+            "transcript_text": "Module 1 extracts represented a video frames and converts sp"
+          },
+          {
+            "vector_id": 7,
+            "segment_id": 4,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 20.295,
+            "end_timestamp": 26.921,
+            "raw_cosine": 0.1087,
+            "calibrated_score": 0.0,
+            "transcript_text": "It's one of the best new features for writing modern and con"
+          },
+          {
+            "vector_id": 1,
+            "segment_id": 0,
+            "video_filename": "sample_presentation.mp4",
+            "start_timestamp": 0.17,
+            "end_timestamp": 2.856,
+            "raw_cosine": 0.0516,
+            "calibrated_score": 0.0,
+            "transcript_text": "Welcome to the Multimodal Video Retrieval Project."
+          },
+          {
+            "vector_id": 4,
+            "segment_id": 1,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 5.382,
+            "end_timestamp": 8.285,
+            "raw_cosine": -0.0278,
+            "calibrated_score": 0.0,
+            "transcript_text": "It brings a smarter way to share data across threads."
+          }
+        ]
+      },
+      "gate_decisions": {
+        "visual_gate": {
+          "metric": "calibrated_prob",
+          "threshold": 0.15,
+          "passed_count": 6,
+          "rejected_count": 15
+        },
+        "text_gate": {
+          "metric": "raw_cosine",
+          "threshold": 0.22,
+          "passed_count": 0,
+          "rejected_count": 7
+        },
+        "rejected_candidates": [
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 10.0,
+            "raw_cosine": 0.1323,
+            "calibrated_score": 0.134,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.1340) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 8.0,
+            "raw_cosine": 0.1323,
+            "calibrated_score": 0.134,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.1340) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 6.0,
+            "raw_cosine": 0.1323,
+            "calibrated_score": 0.134,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.1340) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 14.0,
+            "raw_cosine": 0.1321,
+            "calibrated_score": 0.1315,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.1315) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 12.0,
+            "raw_cosine": 0.1321,
+            "calibrated_score": 0.1315,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.1315) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 4.0,
+            "raw_cosine": 0.0925,
+            "calibrated_score": 0.0017,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0017) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 2.0,
+            "raw_cosine": 0.0925,
+            "calibrated_score": 0.0017,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0017) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 0.0,
+            "raw_cosine": 0.0925,
+            "calibrated_score": 0.0017,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0017) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_8139c3d6507670de",
+            "video_filename": "sample_silent_clip.mkv",
+            "timestamp_seconds": 2.0,
+            "raw_cosine": 0.0633,
+            "calibrated_score": 0.0001,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0001) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_8139c3d6507670de",
+            "video_filename": "sample_silent_clip.mkv",
+            "timestamp_seconds": 0.0,
+            "raw_cosine": 0.0633,
+            "calibrated_score": 0.0001,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0001) < visual_min_prob (0.1500)"
+          }
+        ]
+      },
+      "linking_and_fusion": [
+        {
+          "video_filename": "videoplayback.mp4",
+          "span": [
+            19.0,
+            25.0
+          ],
+          "span_type": "approx_from_frame",
+          "visual_score": 0.434,
+          "text_score": null,
+          "final_fused_score": 0.434,
+          "rrf_score": 0.0098,
+          "reason": "Visual match: frame features align with query (0.43)."
+        }
+      ],
+      "final_ranking": [
+        {
+          "rank": 1,
+          "video_filename": "videoplayback.mp4",
+          "start_seconds": 19.0,
+          "end_seconds": 25.0,
+          "final_score": 0.434,
+          "modalities": [
+            "visual"
+          ],
+          "span_type": "approx_from_frame"
+        }
+      ]
+    },
+    "modality_available": {
+      "visual": true,
+      "text": true
+    },
+    "candidates_retrieved": {
+      "visual_pool_count": 21,
+      "text_pool_count": 7
+    },
+    "candidates_passed_gating": {
+      "visual_passed": 6,
+      "text_passed": 0
+    }
+  },
+  "notices": []
+}

@@ -1,0 +1,4 @@
+search-path = [
+    ".",
+    "../module2"
+]

@@ -1,0 +1,359 @@
+{
+  "schema_version": "3.1.0",
+  "status": "no_match",
+  "message": "No related video segments found for your query.",
+  "results": [],
+  "timings_ms": {
+    "query_encode_visual_ms": 156.04,
+    "query_encode_text_ms": 20.08,
+    "search_visual_ms": 26.1,
+    "search_text_ms": 7.93,
+    "calibrate_fuse_ms": 4.24,
+    "segment_build_ms": 0.03,
+    "total_ms": 214.47
+  },
+  "debug": {
+    "query": "a person riding a bicycle on a road",
+    "top_k": 5,
+    "video_ids": null,
+    "cache_hit_visual": false,
+    "cache_hit_text": false,
+    "cache_hits_visual": 0,
+    "cache_hits_text": 0,
+    "visual_load_count": 1,
+    "text_load_count": 1,
+    "models_reused": true,
+    "index_reused": true,
+    "degraded_modalities": [],
+    "best_rejected_candidates": [
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 10.0,
+        "raw_cosine": 0.009,
+        "calibrated_score": 0.0,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 8.0,
+        "raw_cosine": 0.009,
+        "calibrated_score": 0.0,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 6.0,
+        "raw_cosine": 0.009,
+        "calibrated_score": 0.0,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 14.0,
+        "raw_cosine": 0.0089,
+        "calibrated_score": 0.0,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 12.0,
+        "raw_cosine": 0.0089,
+        "calibrated_score": 0.0,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+      }
+    ],
+    "trace": {
+      "query_received": "a person riding a bicycle on a road",
+      "query_normalised": "a person riding a bicycle on a road",
+      "modalities": {
+        "visual": {
+          "searched": true,
+          "reason": "active",
+          "candidate_count": 21
+        },
+        "text": {
+          "searched": true,
+          "reason": "active",
+          "candidate_count": 7
+        }
+      },
+      "top_raw_hits": {
+        "visual": [
+          {
+            "vector_id": 13,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00005",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 10.0,
+            "span": [
+              9.0,
+              11.0
+            ],
+            "raw_cosine": 0.009,
+            "calibrated_score": 0.0
+          },
+          {
+            "vector_id": 12,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00004",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 8.0,
+            "span": [
+              7.0,
+              9.0
+            ],
+            "raw_cosine": 0.009,
+            "calibrated_score": 0.0
+          },
+          {
+            "vector_id": 11,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00003",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 6.0,
+            "span": [
+              5.0,
+              7.0
+            ],
+            "raw_cosine": 0.009,
+            "calibrated_score": 0.0
+          },
+          {
+            "vector_id": 15,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00007",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 14.0,
+            "span": [
+              13.0,
+              15.0
+            ],
+            "raw_cosine": 0.0089,
+            "calibrated_score": 0.0
+          },
+          {
+            "vector_id": 14,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00006",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 12.0,
+            "span": [
+              11.0,
+              13.0
+            ],
+            "raw_cosine": 0.0089,
+            "calibrated_score": 0.0
+          }
+        ],
+        "text": [
+          {
+            "vector_id": 2,
+            "segment_id": 1,
+            "video_filename": "sample_presentation.mp4",
+            "start_timestamp": 3.859,
+            "end_timestamp": 7.988,
+            "raw_cosine": 0.0593,
+            "calibrated_score": 0.0,
+            "transcript_text": "Module 1 extracts represented a video frames and converts sp"
+          },
+          {
+            "vector_id": 1,
+            "segment_id": 0,
+            "video_filename": "sample_presentation.mp4",
+            "start_timestamp": 0.17,
+            "end_timestamp": 2.856,
+            "raw_cosine": 0.0128,
+            "calibrated_score": 0.0,
+            "transcript_text": "Welcome to the Multimodal Video Retrieval Project."
+          },
+          {
+            "vector_id": 6,
+            "segment_id": 3,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 14.51,
+            "end_timestamp": 19.935,
+            "raw_cosine": -0.0233,
+            "calibrated_score": 0.0,
+            "transcript_text": "Just define a scoped value, assign it temporarily, and use i"
+          },
+          {
+            "vector_id": 4,
+            "segment_id": 1,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 5.382,
+            "end_timestamp": 8.285,
+            "raw_cosine": -0.0237,
+            "calibrated_score": 0.0,
+            "transcript_text": "It brings a smarter way to share data across threads."
+          },
+          {
+            "vector_id": 3,
+            "segment_id": 0,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 0.198,
+            "end_timestamp": 5.182,
+            "raw_cosine": -0.0367,
+            "calibrated_score": 0.0,
+            "transcript_text": "Java 25 introduced scoped values, a safer replacement for th"
+          }
+        ]
+      },
+      "gate_decisions": {
+        "visual_gate": {
+          "metric": "calibrated_prob",
+          "threshold": 0.15,
+          "passed_count": 0,
+          "rejected_count": 21
+        },
+        "text_gate": {
+          "metric": "raw_cosine",
+          "threshold": 0.22,
+          "passed_count": 0,
+          "rejected_count": 7
+        },
+        "rejected_candidates": [
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 10.0,
+            "raw_cosine": 0.009,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 8.0,
+            "raw_cosine": 0.009,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 6.0,
+            "raw_cosine": 0.009,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 14.0,
+            "raw_cosine": 0.0089,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 12.0,
+            "raw_cosine": 0.0089,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 4.0,
+            "raw_cosine": 0.0051,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 2.0,
+            "raw_cosine": 0.0051,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 0.0,
+            "raw_cosine": 0.0051,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 20.0,
+            "raw_cosine": -0.0043,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 18.0,
+            "raw_cosine": -0.0043,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          }
+        ]
+      },
+      "linking_and_fusion": [],
+      "final_ranking": []
+    },
+    "modality_available": {
+      "visual": true,
+      "text": true
+    },
+    "candidates_retrieved": {
+      "visual_pool_count": 21,
+      "text_pool_count": 7
+    },
+    "candidates_passed_gating": {
+      "visual_passed": 0,
+      "text_passed": 0
+    }
+  },
+  "notices": []
+}

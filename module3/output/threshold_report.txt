@@ -1,0 +1,38 @@
+Using ground-truth benchmark suite (10 queries).
+
+Running evaluation across modalities on indexed library...
+
+======================================================================
+EMPIRICAL SCORE DISTRIBUTIONS PER MODALITY
+======================================================================
+VISUAL MODALITY (SigLIP2):
+  Positives (N=3):
+    Raw Cosine:       Min=0.1715, Mean=0.1855, Max=0.1974
+    Calibrated Prob:  Min=0.9276, Mean=0.9703, Max=0.9958
+  Negatives / False Alarms (N=4):
+    Raw Cosine:       Min=-0.0253, Mean=0.0172, Max=0.0759
+    Calibrated Prob:  Min=0.0000, Mean=0.0001, Max=0.0003
+
+TEXT MODALITY (MiniLM-L6-v2):
+  Positives (N=4):
+    Raw Cosine:       Min=0.2955, Mean=0.6831, Max=0.9767
+    Calibrated Score: Min=0.1592, Mean=0.7315, Max=1.0000
+  Negatives / False Alarms (N=4):
+    Raw Cosine:       Min=0.0515, Mean=0.1014, Max=0.1701
+    Calibrated Score: Min=0.0000, Mean=0.0000, Max=0.0000
+
+----------------------------------------------------------------------
+RECOMMENDED SINGLE-GATE THRESHOLDS:
+  visual_min_prob:  0.464 (Pos min=0.9276, Neg max=0.0003)
+  text_min_cosine:  0.233 (Pos min=0.2955, Neg max=0.1701)
+======================================================================
+  [POS] "Java 25 scoped values" -> Best Vis=0.9958, Best Txt=0.8728
+  [POS] "automatically managed within a defined sco" -> Best Vis=N/A, Best Txt=0.1592
+  [POS] "slide with the heading Code Example in yel" -> Best Vis=0.9276, Best Txt=N/A
+  [POS] "a safer alternative to ThreadLocal in mode" -> Best Vis=N/A, Best Txt=0.8938
+  [POS] "Welcome to the Multimodal Video Retrieval " -> Best Vis=N/A, Best Txt=1.0000
+  [POS] "SMPTE color bars test pattern with vertica" -> Best Vis=0.9876, Best Txt=N/A
+  [NEG] "recipe for baking sourdough bread with flo" -> Best Vis=0.0000, Best Txt=0.0000
+  [NEG] "underwater scuba diving with dolphins and " -> Best Vis=0.0000, Best Txt=0.0000
+  [NEG] "space shuttle rocket launch into orbit aro" -> Best Vis=0.0000, Best Txt=0.0000
+  [NEG] "stock market trading algorithms and crypto" -> Best Vis=0.0003, Best Txt=0.0000

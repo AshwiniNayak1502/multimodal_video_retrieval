@@ -1,0 +1,359 @@
+{
+  "schema_version": "3.1.0",
+  "status": "no_match",
+  "message": "No related video segments found for your query.",
+  "results": [],
+  "timings_ms": {
+    "query_encode_visual_ms": 148.59,
+    "query_encode_text_ms": 14.06,
+    "search_visual_ms": 25.56,
+    "search_text_ms": 7.77,
+    "calibrate_fuse_ms": 3.64,
+    "segment_build_ms": 0.03,
+    "total_ms": 199.69
+  },
+  "debug": {
+    "query": "underwater scuba diving with dolphins",
+    "top_k": 5,
+    "video_ids": null,
+    "cache_hit_visual": false,
+    "cache_hit_text": false,
+    "cache_hits_visual": 0,
+    "cache_hits_text": 0,
+    "visual_load_count": 1,
+    "text_load_count": 1,
+    "models_reused": true,
+    "index_reused": true,
+    "degraded_modalities": [],
+    "best_rejected_candidates": [
+      {
+        "modality": "visual",
+        "video_id": "vid_d3147dcb7284cc89",
+        "video_filename": "sample_presentation.mp4",
+        "timestamp_seconds": 2.0,
+        "raw_cosine": -0.0066,
+        "calibrated_score": 0.0,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_d3147dcb7284cc89",
+        "video_filename": "sample_presentation.mp4",
+        "timestamp_seconds": 0.0,
+        "raw_cosine": -0.0086,
+        "calibrated_score": 0.0,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_d3147dcb7284cc89",
+        "video_filename": "sample_presentation.mp4",
+        "timestamp_seconds": 4.0,
+        "raw_cosine": -0.0092,
+        "calibrated_score": 0.0,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_d3147dcb7284cc89",
+        "video_filename": "sample_presentation.mp4",
+        "timestamp_seconds": 6.0,
+        "raw_cosine": -0.0096,
+        "calibrated_score": 0.0,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 4.0,
+        "raw_cosine": -0.0137,
+        "calibrated_score": 0.0,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+      }
+    ],
+    "trace": {
+      "query_received": "underwater scuba diving with dolphins",
+      "query_normalised": "underwater scuba diving with dolphins",
+      "modalities": {
+        "visual": {
+          "searched": true,
+          "reason": "active",
+          "candidate_count": 21
+        },
+        "text": {
+          "searched": true,
+          "reason": "active",
+          "candidate_count": 7
+        }
+      },
+      "top_raw_hits": {
+        "visual": [
+          {
+            "vector_id": 5,
+            "frame_id": "vid_d3147dcb7284cc89_frame_00001",
+            "video_filename": "sample_presentation.mp4",
+            "timestamp_seconds": 2.0,
+            "span": [
+              1.0,
+              3.0
+            ],
+            "raw_cosine": -0.0066,
+            "calibrated_score": 0.0
+          },
+          {
+            "vector_id": 4,
+            "frame_id": "vid_d3147dcb7284cc89_frame_00000",
+            "video_filename": "sample_presentation.mp4",
+            "timestamp_seconds": 0.0,
+            "span": [
+              0.0,
+              1.0
+            ],
+            "raw_cosine": -0.0086,
+            "calibrated_score": 0.0
+          },
+          {
+            "vector_id": 6,
+            "frame_id": "vid_d3147dcb7284cc89_frame_00002",
+            "video_filename": "sample_presentation.mp4",
+            "timestamp_seconds": 4.0,
+            "span": [
+              3.0,
+              5.0
+            ],
+            "raw_cosine": -0.0092,
+            "calibrated_score": 0.0
+          },
+          {
+            "vector_id": 7,
+            "frame_id": "vid_d3147dcb7284cc89_frame_00003",
+            "video_filename": "sample_presentation.mp4",
+            "timestamp_seconds": 6.0,
+            "span": [
+              5.0,
+              7.0
+            ],
+            "raw_cosine": -0.0096,
+            "calibrated_score": 0.0
+          },
+          {
+            "vector_id": 10,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00002",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 4.0,
+            "span": [
+              3.0,
+              5.0
+            ],
+            "raw_cosine": -0.0137,
+            "calibrated_score": 0.0
+          }
+        ],
+        "text": [
+          {
+            "vector_id": 1,
+            "segment_id": 0,
+            "video_filename": "sample_presentation.mp4",
+            "start_timestamp": 0.17,
+            "end_timestamp": 2.856,
+            "raw_cosine": 0.1159,
+            "calibrated_score": 0.0,
+            "transcript_text": "Welcome to the Multimodal Video Retrieval Project."
+          },
+          {
+            "vector_id": 2,
+            "segment_id": 1,
+            "video_filename": "sample_presentation.mp4",
+            "start_timestamp": 3.859,
+            "end_timestamp": 7.988,
+            "raw_cosine": 0.086,
+            "calibrated_score": 0.0,
+            "transcript_text": "Module 1 extracts represented a video frames and converts sp"
+          },
+          {
+            "vector_id": 6,
+            "segment_id": 3,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 14.51,
+            "end_timestamp": 19.935,
+            "raw_cosine": 0.0719,
+            "calibrated_score": 0.0,
+            "transcript_text": "Just define a scoped value, assign it temporarily, and use i"
+          },
+          {
+            "vector_id": 7,
+            "segment_id": 4,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 20.295,
+            "end_timestamp": 26.921,
+            "raw_cosine": -0.0025,
+            "calibrated_score": 0.0,
+            "transcript_text": "It's one of the best new features for writing modern and con"
+          },
+          {
+            "vector_id": 4,
+            "segment_id": 1,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 5.382,
+            "end_timestamp": 8.285,
+            "raw_cosine": -0.0145,
+            "calibrated_score": 0.0,
+            "transcript_text": "It brings a smarter way to share data across threads."
+          }
+        ]
+      },
+      "gate_decisions": {
+        "visual_gate": {
+          "metric": "calibrated_prob",
+          "threshold": 0.15,
+          "passed_count": 0,
+          "rejected_count": 21
+        },
+        "text_gate": {
+          "metric": "raw_cosine",
+          "threshold": 0.22,
+          "passed_count": 0,
+          "rejected_count": 7
+        },
+        "rejected_candidates": [
+          {
+            "modality": "visual",
+            "video_id": "vid_d3147dcb7284cc89",
+            "video_filename": "sample_presentation.mp4",
+            "timestamp_seconds": 2.0,
+            "raw_cosine": -0.0066,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_d3147dcb7284cc89",
+            "video_filename": "sample_presentation.mp4",
+            "timestamp_seconds": 0.0,
+            "raw_cosine": -0.0086,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_d3147dcb7284cc89",
+            "video_filename": "sample_presentation.mp4",
+            "timestamp_seconds": 4.0,
+            "raw_cosine": -0.0092,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_d3147dcb7284cc89",
+            "video_filename": "sample_presentation.mp4",
+            "timestamp_seconds": 6.0,
+            "raw_cosine": -0.0096,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 4.0,
+            "raw_cosine": -0.0137,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 2.0,
+            "raw_cosine": -0.0137,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 0.0,
+            "raw_cosine": -0.0137,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_8139c3d6507670de",
+            "video_filename": "sample_silent_clip.mkv",
+            "timestamp_seconds": 2.0,
+            "raw_cosine": -0.0238,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_8139c3d6507670de",
+            "video_filename": "sample_silent_clip.mkv",
+            "timestamp_seconds": 4.0,
+            "raw_cosine": -0.0238,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_8139c3d6507670de",
+            "video_filename": "sample_silent_clip.mkv",
+            "timestamp_seconds": 0.0,
+            "raw_cosine": -0.0239,
+            "calibrated_score": 0.0,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0000) < visual_min_prob (0.1500)"
+          }
+        ]
+      },
+      "linking_and_fusion": [],
+      "final_ranking": []
+    },
+    "modality_available": {
+      "visual": true,
+      "text": true
+    },
+    "candidates_retrieved": {
+      "visual_pool_count": 21,
+      "text_pool_count": 7
+    },
+    "candidates_passed_gating": {
+      "visual_passed": 0,
+      "text_passed": 0
+    }
+  },
+  "notices": []
+}

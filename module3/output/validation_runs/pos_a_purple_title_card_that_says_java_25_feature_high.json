@@ -1,0 +1,466 @@
+{
+  "schema_version": "3.1.0",
+  "status": "ok",
+  "message": "Found 2 relevant video segment(s).",
+  "results": [
+    {
+      "video_id": "vid_e9f58d28adfac07e",
+      "video_filename": "videoplayback.mp4",
+      "start_seconds": 0.198,
+      "end_seconds": 5.182,
+      "start_formatted": "00:00:00",
+      "end_formatted": "00:00:05",
+      "span_type": "combined",
+      "final_score": 0.6786,
+      "visual_score": 0.9584,
+      "text_score": 0.1338,
+      "visual_raw_cosine": 0.1767,
+      "text_raw_cosine": 0.2803,
+      "modalities": [
+        "visual",
+        "text"
+      ],
+      "reason": "Cross-modal match: visual (0.96) and transcript (0.13) corroborate this segment (weighted fused: 0.68, bonus=0.05).",
+      "seek_seconds": 0.0,
+      "video_path": "C:\\Users\\Lenovo\\Desktop\\Final Project\\module1\\input\\videos\\videoplayback.mp4",
+      "matched_at_seconds": 0.0,
+      "transcript_text": "Java 25 introduced scoped values, a safer replacement for thread local.",
+      "frame_id": "vid_e9f58d28adfac07e_frame_00000",
+      "frame_path": "C:\\Users\\Lenovo\\Desktop\\Final Project\\module1\\output\\frames\\vid_e9f58d28adfac07e\\frame_0000_0.000s.jpg",
+      "rrf_score": 0.01598,
+      "video_file_exists": true,
+      "resolution_seconds": 0.1
+    },
+    {
+      "video_id": "vid_e9f58d28adfac07e",
+      "video_filename": "videoplayback.mp4",
+      "start_seconds": 20.295,
+      "end_seconds": 26.921,
+      "start_formatted": "00:00:20",
+      "end_formatted": "00:00:26",
+      "span_type": "transcript_segment",
+      "final_score": 0.3792,
+      "visual_score": null,
+      "text_score": 0.3792,
+      "visual_raw_cosine": null,
+      "text_raw_cosine": 0.4275,
+      "modalities": [
+        "text"
+      ],
+      "reason": "Speech transcript match: dialogue semantics align with query (0.38).",
+      "seek_seconds": 19.295,
+      "video_path": "C:\\Users\\Lenovo\\Desktop\\Final Project\\module1\\input\\videos\\videoplayback.mp4",
+      "matched_at_seconds": null,
+      "transcript_text": "It's one of the best new features for writing modern and concurrent Java code, followed real coding for more such content.",
+      "frame_id": null,
+      "frame_path": null,
+      "rrf_score": 0.00656,
+      "video_file_exists": true,
+      "resolution_seconds": 0.1
+    }
+  ],
+  "timings_ms": {
+    "query_encode_visual_ms": 269.07,
+    "query_encode_text_ms": 15.8,
+    "search_visual_ms": 25.21,
+    "search_text_ms": 8.31,
+    "calibrate_fuse_ms": 3.47,
+    "segment_build_ms": 0.45,
+    "total_ms": 322.37
+  },
+  "debug": {
+    "query": "a purple title card that says Java 25 Feature Highlight",
+    "top_k": 5,
+    "video_ids": null,
+    "cache_hit_visual": false,
+    "cache_hit_text": false,
+    "cache_hits_visual": 0,
+    "cache_hits_text": 0,
+    "visual_load_count": 1,
+    "text_load_count": 1,
+    "models_reused": true,
+    "index_reused": true,
+    "degraded_modalities": [],
+    "best_rejected_candidates": [
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 10.0,
+        "raw_cosine": 0.1093,
+        "calibrated_score": 0.0115,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0115) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 8.0,
+        "raw_cosine": 0.1093,
+        "calibrated_score": 0.0115,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0115) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 6.0,
+        "raw_cosine": 0.1093,
+        "calibrated_score": 0.0115,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0115) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 14.0,
+        "raw_cosine": 0.109,
+        "calibrated_score": 0.0111,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0111) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 12.0,
+        "raw_cosine": 0.109,
+        "calibrated_score": 0.0111,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0111) < visual_min_prob (0.1500)"
+      }
+    ],
+    "trace": {
+      "query_received": "a purple title card that says Java 25 Feature Highlight",
+      "query_normalised": "a purple title card that says java 25 feature highlight",
+      "modalities": {
+        "visual": {
+          "searched": true,
+          "reason": "active",
+          "candidate_count": 21
+        },
+        "text": {
+          "searched": true,
+          "reason": "active",
+          "candidate_count": 7
+        }
+      },
+      "top_raw_hits": {
+        "visual": [
+          {
+            "vector_id": 10,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00002",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 4.0,
+            "span": [
+              3.0,
+              5.0
+            ],
+            "raw_cosine": 0.1767,
+            "calibrated_score": 0.9584
+          },
+          {
+            "vector_id": 9,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00001",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 2.0,
+            "span": [
+              1.0,
+              3.0
+            ],
+            "raw_cosine": 0.1767,
+            "calibrated_score": 0.9584
+          },
+          {
+            "vector_id": 8,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00000",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 0.0,
+            "span": [
+              0.0,
+              1.0
+            ],
+            "raw_cosine": 0.1767,
+            "calibrated_score": 0.9584
+          },
+          {
+            "vector_id": 13,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00005",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 10.0,
+            "span": [
+              9.0,
+              11.0
+            ],
+            "raw_cosine": 0.1093,
+            "calibrated_score": 0.0115
+          },
+          {
+            "vector_id": 12,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00004",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 8.0,
+            "span": [
+              7.0,
+              9.0
+            ],
+            "raw_cosine": 0.1093,
+            "calibrated_score": 0.0115
+          }
+        ],
+        "text": [
+          {
+            "vector_id": 7,
+            "segment_id": 4,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 20.295,
+            "end_timestamp": 26.921,
+            "raw_cosine": 0.4275,
+            "calibrated_score": 0.3792,
+            "transcript_text": "It's one of the best new features for writing modern and con"
+          },
+          {
+            "vector_id": 3,
+            "segment_id": 0,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 0.198,
+            "end_timestamp": 5.182,
+            "raw_cosine": 0.2803,
+            "calibrated_score": 0.1338,
+            "transcript_text": "Java 25 introduced scoped values, a safer replacement for th"
+          },
+          {
+            "vector_id": 1,
+            "segment_id": 0,
+            "video_filename": "sample_presentation.mp4",
+            "start_timestamp": 0.17,
+            "end_timestamp": 2.856,
+            "raw_cosine": 0.1504,
+            "calibrated_score": 0.0,
+            "transcript_text": "Welcome to the Multimodal Video Retrieval Project."
+          },
+          {
+            "vector_id": 2,
+            "segment_id": 1,
+            "video_filename": "sample_presentation.mp4",
+            "start_timestamp": 3.859,
+            "end_timestamp": 7.988,
+            "raw_cosine": 0.1065,
+            "calibrated_score": 0.0,
+            "transcript_text": "Module 1 extracts represented a video frames and converts sp"
+          },
+          {
+            "vector_id": 4,
+            "segment_id": 1,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 5.382,
+            "end_timestamp": 8.285,
+            "raw_cosine": 0.086,
+            "calibrated_score": 0.0,
+            "transcript_text": "It brings a smarter way to share data across threads."
+          }
+        ]
+      },
+      "gate_decisions": {
+        "visual_gate": {
+          "metric": "calibrated_prob",
+          "threshold": 0.15,
+          "passed_count": 3,
+          "rejected_count": 18
+        },
+        "text_gate": {
+          "metric": "raw_cosine",
+          "threshold": 0.22,
+          "passed_count": 2,
+          "rejected_count": 5
+        },
+        "rejected_candidates": [
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 10.0,
+            "raw_cosine": 0.1093,
+            "calibrated_score": 0.0115,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0115) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 8.0,
+            "raw_cosine": 0.1093,
+            "calibrated_score": 0.0115,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0115) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 6.0,
+            "raw_cosine": 0.1093,
+            "calibrated_score": 0.0115,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0115) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 14.0,
+            "raw_cosine": 0.109,
+            "calibrated_score": 0.0111,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0111) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 12.0,
+            "raw_cosine": 0.109,
+            "calibrated_score": 0.0111,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0111) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 20.0,
+            "raw_cosine": 0.0935,
+            "calibrated_score": 0.002,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0020) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 18.0,
+            "raw_cosine": 0.0935,
+            "calibrated_score": 0.002,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0020) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 16.0,
+            "raw_cosine": 0.0934,
+            "calibrated_score": 0.0019,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0019) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 22.0,
+            "raw_cosine": 0.093,
+            "calibrated_score": 0.0018,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0018) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 26.0,
+            "raw_cosine": 0.093,
+            "calibrated_score": 0.0018,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0018) < visual_min_prob (0.1500)"
+          }
+        ]
+      },
+      "linking_and_fusion": [
+        {
+          "video_filename": "videoplayback.mp4",
+          "span": [
+            0.2,
+            5.18
+          ],
+          "span_type": "combined",
+          "visual_score": 0.9584,
+          "text_score": 0.1338,
+          "final_fused_score": 0.6786,
+          "rrf_score": 0.016,
+          "reason": "Cross-modal match: visual (0.96) and transcript (0.13) corroborate this segment (weighted fused: 0.68, bonus=0.05)."
+        },
+        {
+          "video_filename": "videoplayback.mp4",
+          "span": [
+            20.3,
+            26.92
+          ],
+          "span_type": "transcript_segment",
+          "visual_score": null,
+          "text_score": 0.3792,
+          "final_fused_score": 0.3792,
+          "rrf_score": 0.0066,
+          "reason": "Speech transcript match: dialogue semantics align with query (0.38)."
+        }
+      ],
+      "final_ranking": [
+        {
+          "rank": 1,
+          "video_filename": "videoplayback.mp4",
+          "start_seconds": 0.2,
+          "end_seconds": 5.18,
+          "final_score": 0.6786,
+          "modalities": [
+            "visual",
+            "text"
+          ],
+          "span_type": "combined"
+        },
+        {
+          "rank": 2,
+          "video_filename": "videoplayback.mp4",
+          "start_seconds": 20.3,
+          "end_seconds": 26.92,
+          "final_score": 0.3792,
+          "modalities": [
+            "text"
+          ],
+          "span_type": "transcript_segment"
+        }
+      ]
+    },
+    "modality_available": {
+      "visual": true,
+      "text": true
+    },
+    "candidates_retrieved": {
+      "visual_pool_count": 21,
+      "text_pool_count": 7
+    },
+    "candidates_passed_gating": {
+      "visual_passed": 3,
+      "text_passed": 2
+    }
+  },
+  "notices": []
+}

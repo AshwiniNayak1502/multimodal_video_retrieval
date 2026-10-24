@@ -1,0 +1,359 @@
+{
+  "schema_version": "3.1.0",
+  "status": "no_match",
+  "message": "No related video segments found for your query.",
+  "results": [],
+  "timings_ms": {
+    "query_encode_visual_ms": 135.2,
+    "query_encode_text_ms": 16.1,
+    "search_visual_ms": 23.99,
+    "search_text_ms": 8.05,
+    "calibrate_fuse_ms": 3.53,
+    "segment_build_ms": 0.03,
+    "total_ms": 186.97
+  },
+  "debug": {
+    "query": "stock market trading algorithms",
+    "top_k": 5,
+    "video_ids": null,
+    "cache_hit_visual": false,
+    "cache_hit_text": false,
+    "cache_hits_visual": 0,
+    "cache_hits_text": 0,
+    "visual_load_count": 1,
+    "text_load_count": 1,
+    "models_reused": true,
+    "index_reused": true,
+    "degraded_modalities": [],
+    "best_rejected_candidates": [
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 14.0,
+        "raw_cosine": 0.0969,
+        "calibrated_score": 0.0029,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0029) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 12.0,
+        "raw_cosine": 0.0969,
+        "calibrated_score": 0.0029,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0029) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 10.0,
+        "raw_cosine": 0.0966,
+        "calibrated_score": 0.0028,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0028) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 8.0,
+        "raw_cosine": 0.0966,
+        "calibrated_score": 0.0028,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0028) < visual_min_prob (0.1500)"
+      },
+      {
+        "modality": "visual",
+        "video_id": "vid_e9f58d28adfac07e",
+        "video_filename": "videoplayback.mp4",
+        "timestamp_seconds": 6.0,
+        "raw_cosine": 0.0966,
+        "calibrated_score": 0.0028,
+        "gate": "visual_min_prob",
+        "threshold": 0.15,
+        "rejection_reason": "calibrated_prob (0.0028) < visual_min_prob (0.1500)"
+      }
+    ],
+    "trace": {
+      "query_received": "stock market trading algorithms",
+      "query_normalised": "stock market trading algorithms",
+      "modalities": {
+        "visual": {
+          "searched": true,
+          "reason": "active",
+          "candidate_count": 21
+        },
+        "text": {
+          "searched": true,
+          "reason": "active",
+          "candidate_count": 7
+        }
+      },
+      "top_raw_hits": {
+        "visual": [
+          {
+            "vector_id": 15,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00007",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 14.0,
+            "span": [
+              13.0,
+              15.0
+            ],
+            "raw_cosine": 0.0969,
+            "calibrated_score": 0.0029
+          },
+          {
+            "vector_id": 14,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00006",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 12.0,
+            "span": [
+              11.0,
+              13.0
+            ],
+            "raw_cosine": 0.0969,
+            "calibrated_score": 0.0029
+          },
+          {
+            "vector_id": 13,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00005",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 10.0,
+            "span": [
+              9.0,
+              11.0
+            ],
+            "raw_cosine": 0.0966,
+            "calibrated_score": 0.0028
+          },
+          {
+            "vector_id": 12,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00004",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 8.0,
+            "span": [
+              7.0,
+              9.0
+            ],
+            "raw_cosine": 0.0966,
+            "calibrated_score": 0.0028
+          },
+          {
+            "vector_id": 11,
+            "frame_id": "vid_e9f58d28adfac07e_frame_00003",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 6.0,
+            "span": [
+              5.0,
+              7.0
+            ],
+            "raw_cosine": 0.0966,
+            "calibrated_score": 0.0028
+          }
+        ],
+        "text": [
+          {
+            "vector_id": 4,
+            "segment_id": 1,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 5.382,
+            "end_timestamp": 8.285,
+            "raw_cosine": 0.186,
+            "calibrated_score": 0.0,
+            "transcript_text": "It brings a smarter way to share data across threads."
+          },
+          {
+            "vector_id": 5,
+            "segment_id": 2,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 8.485,
+            "end_timestamp": 14.11,
+            "raw_cosine": 0.0988,
+            "calibrated_score": 0.0,
+            "transcript_text": "Unlike thread local, they are safer, cleaner, and automatica"
+          },
+          {
+            "vector_id": 7,
+            "segment_id": 4,
+            "video_filename": "videoplayback.mp4",
+            "start_timestamp": 20.295,
+            "end_timestamp": 26.921,
+            "raw_cosine": 0.0784,
+            "calibrated_score": 0.0,
+            "transcript_text": "It's one of the best new features for writing modern and con"
+          },
+          {
+            "vector_id": 1,
+            "segment_id": 0,
+            "video_filename": "sample_presentation.mp4",
+            "start_timestamp": 0.17,
+            "end_timestamp": 2.856,
+            "raw_cosine": 0.055,
+            "calibrated_score": 0.0,
+            "transcript_text": "Welcome to the Multimodal Video Retrieval Project."
+          },
+          {
+            "vector_id": 2,
+            "segment_id": 1,
+            "video_filename": "sample_presentation.mp4",
+            "start_timestamp": 3.859,
+            "end_timestamp": 7.988,
+            "raw_cosine": 0.0336,
+            "calibrated_score": 0.0,
+            "transcript_text": "Module 1 extracts represented a video frames and converts sp"
+          }
+        ]
+      },
+      "gate_decisions": {
+        "visual_gate": {
+          "metric": "calibrated_prob",
+          "threshold": 0.15,
+          "passed_count": 0,
+          "rejected_count": 21
+        },
+        "text_gate": {
+          "metric": "raw_cosine",
+          "threshold": 0.22,
+          "passed_count": 0,
+          "rejected_count": 7
+        },
+        "rejected_candidates": [
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 14.0,
+            "raw_cosine": 0.0969,
+            "calibrated_score": 0.0029,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0029) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 12.0,
+            "raw_cosine": 0.0969,
+            "calibrated_score": 0.0029,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0029) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 10.0,
+            "raw_cosine": 0.0966,
+            "calibrated_score": 0.0028,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0028) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 8.0,
+            "raw_cosine": 0.0966,
+            "calibrated_score": 0.0028,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0028) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 6.0,
+            "raw_cosine": 0.0966,
+            "calibrated_score": 0.0028,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0028) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 22.0,
+            "raw_cosine": 0.0961,
+            "calibrated_score": 0.0026,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0026) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 26.0,
+            "raw_cosine": 0.0961,
+            "calibrated_score": 0.0026,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0026) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 24.0,
+            "raw_cosine": 0.0961,
+            "calibrated_score": 0.0026,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0026) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 20.0,
+            "raw_cosine": 0.096,
+            "calibrated_score": 0.0026,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0026) < visual_min_prob (0.1500)"
+          },
+          {
+            "modality": "visual",
+            "video_id": "vid_e9f58d28adfac07e",
+            "video_filename": "videoplayback.mp4",
+            "timestamp_seconds": 18.0,
+            "raw_cosine": 0.096,
+            "calibrated_score": 0.0026,
+            "gate": "visual_min_prob",
+            "threshold": 0.15,
+            "rejection_reason": "calibrated_prob (0.0026) < visual_min_prob (0.1500)"
+          }
+        ]
+      },
+      "linking_and_fusion": [],
+      "final_ranking": []
+    },
+    "modality_available": {
+      "visual": true,
+      "text": true
+    },
+    "candidates_retrieved": {
+      "visual_pool_count": 21,
+      "text_pool_count": 7
+    },
+    "candidates_passed_gating": {
+      "visual_passed": 0,
+      "text_passed": 0
+    }
+  },
+  "notices": []
+}
