@@ -1,0 +1,205 @@
+/* VideoContextEngine - Dark Navy & Purple Theme */
+
+/* Global container styling */
+.stApp {
+    background-color: #0A0A1F;
+    color: #E2E8F0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Sidebar styling */
+section[data-testid="stSidebar"] {
+    background-color: #0E0E24;
+    border-right: 1px solid #1E1E3F;
+}
+
+section[data-testid="stSidebar"] .stMarkdown h2, 
+section[data-testid="stSidebar"] .stMarkdown h3 {
+    color: #F8FAFC;
+    font-weight: 700;
+}
+
+/* Card surfaces */
+.vce-card {
+    background: #13132B;
+    border: 1px solid #23234A;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.vce-card:hover {
+    border-color: #4C3C8C;
+    box-shadow: 0 4px 20px rgba(124, 92, 255, 0.12);
+}
+
+.vce-card-active {
+    background: #171738;
+    border: 2px solid #7C5CFF !important;
+    box-shadow: 0 0 16px rgba(124, 92, 255, 0.25);
+}
+
+/* Result Card */
+.result-card-container {
+    background: #13132B;
+    border: 1px solid #25254D;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.85rem;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.result-card-container:hover {
+    border-color: #7C5CFF;
+    transform: translateY(-2px);
+}
+
+/* Badges & Chips */
+.modality-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-right: 6px;
+}
+
+.modality-visual {
+    background: rgba(124, 92, 255, 0.2);
+    color: #A78BFA;
+    border: 1px solid rgba(124, 92, 255, 0.4);
+}
+
+.modality-transcript {
+    background: rgba(14, 165, 233, 0.2);
+    color: #38BDF8;
+    border: 1px solid rgba(14, 165, 233, 0.4);
+}
+
+.modality-hybrid {
+    background: rgba(168, 85, 247, 0.2);
+    color: #C084FC;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.score-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ADE80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    font-weight: 600;
+    font-size: 0.78rem;
+}
+
+.timestamp-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #1C1C3D;
+    color: #94A3B8;
+    font-family: monospace;
+    font-size: 0.8rem;
+    border: 1px solid #2C2C54;
+}
+
+/* Status Badges */
+.status-dot {
+    height: 8px;
+    width: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+}
+
+.status-completed {
+    background-color: #22C55E;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.status-processing, .status-indexing {
+    background-color: #F59E0B;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+.status-failed {
+    background-color: #EF4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+/* Key Moments Timeline */
+.key-moment-item {
+    background: #161633;
+    border: 1px solid #282852;
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.key-moment-item:hover {
+    border-color: #7C5CFF;
+    background: #1E1E45;
+}
+
+/* Buttons */
+.stButton > button {
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #7C5CFF 0%, #6343E0 100%);
+    border: none;
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(124, 92, 255, 0.3);
+}
+
+.stButton > button[kind="primary"]:hover {
+    box-shadow: 0 6px 18px rgba(124, 92, 255, 0.45);
+    transform: translateY(-1px);
+}
+
+/* Auth View */
+.auth-container {
+    max-width: 440px;
+    margin: 2rem auto;
+    background: #13132B;
+    border: 1px solid #23234A;
+    border-radius: 16px;
+    padding: 2.25rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+}
+
+.oauth-disabled-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.65rem 1rem;
+    background-color: #1A1A36;
+    border: 1px dashed #3D3D6A;
+    border-radius: 8px;
+    color: #64748B;
+    font-weight: 500;
+    cursor: not-allowed;
+    text-align: center;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+/* Video Header info */
+.video-player-header {
+    background: #13132B;
+    border-bottom: 2px solid #23234A;
+    border-radius: 12px 12px 0 0;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.5rem;
+}

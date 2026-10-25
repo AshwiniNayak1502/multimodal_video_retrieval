@@ -1,0 +1,57 @@
+# Environment & Virtual Environments
+.venv/
+venv/
+env/
+.venv313/
+.env
+.env.local
+
+# Python Caches & Build Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Databases & Runtime Data
+data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Module Video Storage & Processing Outputs
+module1/input/videos/
+module1/output/
+module2/output/
+module3/output/
+input/videos/
+output/
+
+# Playback Proxies
+playback/
+
+# Model & Framework Caches
+.cache/
+hf_cache/
+torch_cache/
+whisper_cache/
+
+# Logs
+*.log
+logs/
+
+# Salesforce / Scratch Metadata
+.sf/
+
+# IDE & OS Artifacts
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Streamlit Local Secrets
+.streamlit/secrets.toml

@@ -1,0 +1,42 @@
+# VideoContextEngine - Core Production Dependencies
+# Pinned from working Windows 11 / Python 3.13 environment
+
+# Frontend
+streamlit==1.66.1
+
+# Security & Authentication
+argon2-cffi==25.1.0
+argon2-cffi-bindings==25.1.0
+bcrypt==5.0.0
+
+# Vector Index & Search
+faiss-cpu==1.13.2
+
+# Deep Learning Models & Embeddings
+torch==2.11.0
+torchvision==0.26.0
+torchaudio==2.11.0
+transformers==5.1.0
+sentence-transformers==5.4.1
+huggingface_hub==1.4.1
+safetensors==0.7.0
+
+# Audio Transcription (Module 1)
+whisperx==3.8.6
+faster-whisper==1.2.1
+ctranslate2==4.8.2
+
+# Video Processing & Vision
+opencv-python==4.13.0.92
+pillow==11.3.0
+imageio==2.37.3
+imageio-ffmpeg==0.6.0
+av==15.1.0
+
+# Numeric, Scientific & Data Validation
+numpy==2.1.2
+scipy==1.17.0
+scikit-learn==1.8.0
+pydantic==2.12.5
+python-dotenv==1.2.1
+tqdm==4.67.1

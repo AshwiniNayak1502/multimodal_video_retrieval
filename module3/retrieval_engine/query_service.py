@@ -299,6 +299,7 @@ class QueryService:
         top_k: Any,
         video_ids: Optional[Sequence[str]],
         modality_weights: Optional[Dict[str, float]] = None,
+        modalities: Optional[Sequence[str]] = None,
     ) -> None:
         """Validate search inputs according to strict system specification."""
         if not isinstance(query, str) or not query.strip():
@@ -359,6 +360,25 @@ class QueryService:
                         f"Unknown video_id '{vid}'. Indexed videos: {sorted(known_videos)}.",
                         user_friendly_message=f"Video ID '{vid}' was not found in the indexed library.",
                     )
+
+        if modalities is not None:
+            if not isinstance(modalities, (list, tuple, set)):
+                raise ValidationError(
+                    "modalities must be a sequence containing 'visual' and/or 'text'.",
+                    user_friendly_message="Invalid modalities format.",
+                )
+            valid_m = {"visual", "text"}
+            given_m = set(modalities)
+            if not given_m.issubset(valid_m):
+                raise ValidationError(
+                    f"Invalid modality in {modalities}. Allowed: ['visual', 'text'].",
+                    user_friendly_message="Selected modalities must be 'visual' or 'text'.",
+                )
+            if len(given_m) == 0:
+                raise ValidationError(
+                    "At least one modality must be selected.",
+                    user_friendly_message="Please select at least one search modality.",
+                )
 
     def _preflight_check(self) -> None:
         """Check index readiness, vector population, and model consistency."""
@@ -468,6 +488,7 @@ class QueryService:
         video_ids: Optional[Sequence[str]] = None,
         modality_weights: Optional[Dict[str, float]] = None,
         expect_segment: Optional[str] = None,
+        modalities: Sequence[str] = ("visual", "text"),
     ) -> SearchResponse:
         """Execute multimodal semantic query search and timestamped segment retrieval."""
         timings = SearchTimings()
@@ -489,6 +510,7 @@ class QueryService:
             "query": query,
             "top_k": top_k,
             "video_ids": list(video_ids) if video_ids else None,
+            "modalities": list(modalities) if modalities else ["visual", "text"],
             "cache_hit_visual": False,
             "cache_hit_text": False,
             "cache_hits_visual": self._query_cache_hits_visual,
@@ -505,7 +527,7 @@ class QueryService:
         with self._lock:
             # Step 1: Input Validation
             try:
-                self.validate_inputs(query, top_k, video_ids, modality_weights)
+                self.validate_inputs(query, top_k, video_ids, modality_weights, modalities)
             except ValidationError as val_err:
                 logger.warning("Validation error on search request: %s", val_err)
                 return SearchResponse(
@@ -575,41 +597,50 @@ class QueryService:
                 txt_vec = None
                 vis_err = None
                 txt_err = None
+                selected_modalities = set(modalities) if modalities else {"visual", "text"}
 
-                # Visual query encoding
-                with Timer() as q_vis_timer:
-                    try:
-                        vis_vec, vis_cached = self._get_query_embedding_visual(clean_query)
-                    except Exception as exc:
-                        vis_name = getattr(getattr(self.index, "visual_embedder", None), "model_name", "google/siglip2-base-patch16-224")
-                        vis_err = f"Failed to encode visual query with model '{vis_name}': {repr(exc)}"
-                        logger.error("Visual query embedding failed: %s\n%s", repr(exc), traceback.format_exc())
-                timings.query_encode_visual_ms = q_vis_timer.elapsed_ms
+                # Visual query encoding (only if visual modality selected)
+                if "visual" in selected_modalities:
+                    with Timer() as q_vis_timer:
+                        try:
+                            vis_vec, vis_cached = self._get_query_embedding_visual(clean_query)
+                        except Exception as exc:
+                            vis_name = getattr(getattr(self.index, "visual_embedder", None), "model_name", "google/siglip2-base-patch16-224")
+                            vis_err = f"Failed to encode visual query with model '{vis_name}': {repr(exc)}"
+                            logger.error("Visual query embedding failed: %s\n%s", repr(exc), traceback.format_exc())
+                    timings.query_encode_visual_ms = q_vis_timer.elapsed_ms
 
-                # Text query encoding
-                with Timer() as q_txt_timer:
-                    try:
-                        txt_vec, txt_cached = self._get_query_embedding_text(clean_query)
-                    except Exception as exc:
-                        txt_name = getattr(getattr(self.index, "text_embedder", None), "model_name", "sentence-transformers/all-MiniLM-L6-v2")
-                        txt_err = f"Failed to encode text query with model '{txt_name}': {repr(exc)}"
-                        logger.error("Text query embedding failed: %s\n%s", repr(exc), traceback.format_exc())
-                timings.query_encode_text_ms = q_txt_timer.elapsed_ms
+                # Text query encoding (only if text modality selected)
+                if "text" in selected_modalities:
+                    with Timer() as q_txt_timer:
+                        try:
+                            txt_vec, txt_cached = self._get_query_embedding_text(clean_query)
+                        except Exception as exc:
+                            txt_name = getattr(getattr(self.index, "text_embedder", None), "model_name", "sentence-transformers/all-MiniLM-L6-v2")
+                            txt_err = f"Failed to encode text query with model '{txt_name}': {repr(exc)}"
+                            logger.error("Text query embedding failed: %s\n%s", repr(exc), traceback.format_exc())
+                    timings.query_encode_text_ms = q_txt_timer.elapsed_ms
 
                 debug_info["cache_hit_visual"] = vis_cached
                 debug_info["cache_hit_text"] = txt_cached
                 debug_info["cache_hits_visual"] = self._query_cache_hits_visual
                 debug_info["cache_hits_text"] = self._query_cache_hits_text
 
-                # Check encoder failure modes (R1)
-                if vis_err is not None and txt_err is not None:
-                    error_msg = "Both query encoders failed to process the request. Please check system logs."
-                    logger.error("Both query encoders failed:\n- Visual: %s\n- Text: %s", vis_err, txt_err)
-                    debug_info["degraded_modalities"] = ["visual", "text"]
+                # Check encoder failure modes for requested modalities
+                failed_modalities = set()
+                if vis_err is not None:
+                    failed_modalities.add("visual")
+                if txt_err is not None:
+                    failed_modalities.add("text")
+
+                if selected_modalities.issubset(failed_modalities):
+                    error_msg = "Selected query encoder(s) failed to process the request. Please check system logs."
+                    logger.error("All selected query encoders failed:\n- Visual: %s\n- Text: %s", vis_err, txt_err)
+                    debug_info["degraded_modalities"] = list(failed_modalities)
                     debug_info["encoder_errors"] = {"visual": vis_err, "text": txt_err}
                     trace["modalities"] = {
-                        "visual": {"searched": False, "reason": vis_err, "candidate_count": 0},
-                        "text": {"searched": False, "reason": txt_err, "candidate_count": 0},
+                        "visual": {"searched": False, "reason": vis_err or "excluded", "candidate_count": 0},
+                        "text": {"searched": False, "reason": txt_err or "excluded", "candidate_count": 0},
                     }
                     return SearchResponse(
                         schema_version=SCHEMA_VERSION,
@@ -622,13 +653,13 @@ class QueryService:
                     )
 
                 degraded = []
-                if vis_err is not None:
+                if vis_err is not None and "visual" in selected_modalities:
                     degraded.append("visual")
                     debug_info["warning"] = "Visual search encoder degraded."
                     debug_info["visual_error"] = vis_err
                     notices.append("Visual search unavailable for this query; transcript results only.")
                     logger.warning("Degraded search (visual encoder): %s", vis_err)
-                if txt_err is not None:
+                if txt_err is not None and "text" in selected_modalities:
                     degraded.append("text")
                     debug_info["warning"] = "Text search encoder degraded."
                     debug_info["text_error"] = txt_err
@@ -637,28 +668,42 @@ class QueryService:
                 debug_info["degraded_modalities"] = degraded
 
                 # Step 4: Candidate Retrieval per Modality
-                visual_available = self.index.vis_mgr.ntotal > 0 and vis_vec is not None
-                text_available = self.index.txt_mgr.ntotal > 0 and txt_vec is not None
+                visual_available = (
+                    "visual" in selected_modalities
+                    and self.index.vis_mgr.ntotal > 0
+                    and vis_vec is not None
+                )
+                text_available = (
+                    "text" in selected_modalities
+                    and self.index.txt_mgr.ntotal > 0
+                    and txt_vec is not None
+                )
 
                 if video_ids:
                     try:
                         cur = self.index.store.connection.cursor()
                         placeholders = ",".join("?" for _ in video_ids)
-                        cur.execute(f"SELECT COUNT(*) FROM visual_vectors WHERE video_id IN ({placeholders})", tuple(video_ids))
-                        vis_row = cur.fetchone()
-                        if vis_row and vis_row[0] == 0:
-                            visual_available = False
-                        cur.execute(f"SELECT COUNT(*) FROM text_vectors WHERE video_id IN ({placeholders})", tuple(video_ids))
-                        txt_row = cur.fetchone()
-                        if txt_row and txt_row[0] == 0:
-                            text_available = False
+                        if visual_available:
+                            cur.execute(f"SELECT COUNT(*) FROM visual_vectors WHERE video_id IN ({placeholders})", tuple(video_ids))
+                            vis_row = cur.fetchone()
+                            if vis_row and vis_row[0] == 0:
+                                visual_available = False
+                        if text_available:
+                            cur.execute(f"SELECT COUNT(*) FROM text_vectors WHERE video_id IN ({placeholders})", tuple(video_ids))
+                            txt_row = cur.fetchone()
+                            if txt_row and txt_row[0] == 0:
+                                text_available = False
                     except Exception as e:
                         logger.debug("Failed checking video_ids modality availability: %s", e)
 
-                if not visual_available and vis_err is None:
+                if "visual" in selected_modalities and not visual_available and vis_err is None and len(selected_modalities) > 1:
                     notices.append("Visual search unavailable for this query; transcript results only.")
-                if not text_available and txt_err is None:
+                if "text" in selected_modalities and not text_available and txt_err is None and len(selected_modalities) > 1:
                     notices.append("Transcript search unavailable for this query; visual results only.")
+                if selected_modalities == {"visual"}:
+                    notices.append("Search restricted to visual modality.")
+                elif selected_modalities == {"text"}:
+                    notices.append("Search restricted to transcript modality.")
 
                 debug_info["modality_available"] = {
                     "visual": visual_available,
@@ -694,12 +739,18 @@ class QueryService:
                 trace["modalities"] = {
                     "visual": {
                         "searched": visual_available,
-                        "reason": "active" if visual_available else (vis_err or "no_vectors_in_index"),
+                        "reason": "active" if visual_available else (
+                            "excluded_by_query_modalities" if "visual" not in selected_modalities
+                            else (vis_err or "no_vectors_in_index")
+                        ),
                         "candidate_count": len(visual_raw_hits),
                     },
                     "text": {
                         "searched": text_available,
-                        "reason": "active" if text_available else (txt_err or "no_vectors_in_index"),
+                        "reason": "active" if text_available else (
+                            "excluded_by_query_modalities" if "text" not in selected_modalities
+                            else (txt_err or "no_vectors_in_index")
+                        ),
                         "candidate_count": len(text_raw_hits),
                     },
                 }

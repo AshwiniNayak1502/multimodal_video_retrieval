@@ -221,3 +221,58 @@ def test_thread_safety_concurrent_searches(
     assert not errors, f"Concurrent execution errors: {errors}"
     assert len(responses) == 12
 
+
+def test_modalities_parameter_validation(
+    indexed_test_environment: Tuple[QueryService, Module3Config, Any, Any]
+) -> None:
+    """Verify input validation for the additive modalities argument."""
+    service, _, _, _ = indexed_test_environment
+
+    # Valid modalities arguments
+    r_both = service.search(query="test query", modalities=["visual", "text"])
+    assert r_both.status in ("ok", "no_match")
+
+    r_vis = service.search(query="test query", modalities=["visual"])
+    assert r_vis.status in ("ok", "no_match")
+
+    r_txt = service.search(query="test query", modalities=("text",))
+    assert r_txt.status in ("ok", "no_match")
+
+    # Invalid modalities: empty sequence
+    r_empty = service.search(query="test query", modalities=[])
+    assert r_empty.status == "error"
+    assert "at least one" in r_empty.message.lower()
+
+    # Invalid modalities: unsupported modality name
+    r_invalid_name = service.search(query="test query", modalities=["audio"])
+    assert r_invalid_name.status == "error"
+    assert "invalid modality" in r_invalid_name.message.lower() or "modalities" in r_invalid_name.message.lower()
+
+    # Invalid modalities: non-sequence type
+    r_invalid_type = service.search(query="test query", modalities="visual")  # type: ignore
+    assert r_invalid_type.status == "error"
+
+
+def test_modalities_selective_execution(
+    indexed_test_environment: Tuple[QueryService, Module3Config, Any, Any]
+) -> None:
+    """Verify that visual-only and text-only modes selectively execute encoders and retrievers."""
+    service, _, vis_emb, txt_emb = indexed_test_environment
+
+    # Visual only
+    r_vis = service.search(query="multimodal query", modalities=["visual"], top_k=5)
+    assert r_vis.debug["trace"]["modalities"]["visual"]["searched"] is True
+    assert r_vis.debug["trace"]["modalities"]["text"]["searched"] is False
+    assert r_vis.debug["trace"]["modalities"]["text"]["reason"] == "excluded_by_query_modalities"
+    for res in r_vis.results:
+        assert res.modalities == ["visual"]
+
+    # Text only
+    r_txt = service.search(query="multimodal query", modalities=["text"], top_k=5)
+    assert r_txt.debug["trace"]["modalities"]["text"]["searched"] is True
+    assert r_txt.debug["trace"]["modalities"]["visual"]["searched"] is False
+    assert r_txt.debug["trace"]["modalities"]["visual"]["reason"] == "excluded_by_query_modalities"
+    for res in r_txt.results:
+        assert res.modalities == ["text"]
+
+

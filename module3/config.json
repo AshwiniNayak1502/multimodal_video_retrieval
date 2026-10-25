@@ -1,6 +1,6 @@
 {
   "min_top_k": 3,
-  "max_top_k": 5,
+  "max_top_k": 10,
   "default_top_k": 5,
   "max_query_chars": 500,
   "visual_pool": 50,
