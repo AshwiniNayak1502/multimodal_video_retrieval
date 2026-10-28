@@ -58,7 +58,8 @@ def render_auth_view(db: Optional[AppDatabase] = None) -> Optional[User]:
                     if res.success and res.user and res.token:
                         st.session_state["session_token"] = res.token
                         st.session_state["user"] = res.user
-                        st.success(f"Welcome back, {res.user.display_name}!")
+                        st.session_state.pop("workspace_init_error", None)
+                        st.session_state["workspace_ready"] = False
                         st.rerun()
                     else:
                         st.error(res.error_message or "Invalid email or password.")
@@ -88,7 +89,8 @@ def render_auth_view(db: Optional[AppDatabase] = None) -> Optional[User]:
                     if res.success and res.user and res.token:
                         st.session_state["session_token"] = res.token
                         st.session_state["user"] = res.user
-                        st.success("Account created successfully! Logging you in...")
+                        st.session_state.pop("workspace_init_error", None)
+                        st.session_state["workspace_ready"] = False
                         st.rerun()
                     else:
                         st.error(res.error_message or "Registration failed.")
