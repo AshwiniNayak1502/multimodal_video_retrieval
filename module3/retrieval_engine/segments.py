@@ -108,6 +108,30 @@ class Result:
     visual_raw_cosine: Optional[float] = None
     text_raw_cosine: Optional[float] = None
 
+    @property
+    def start_time(self) -> float:
+        """Backward-compatibility alias for start_seconds."""
+        return self.start_seconds
+
+    @property
+    def end_time(self) -> float:
+        """Backward-compatibility alias for end_seconds."""
+        return self.end_seconds
+
+    @property
+    def score(self) -> float:
+        """Backward-compatibility alias for final_score."""
+        return self.final_score
+
+    @property
+    def modality(self) -> str:
+        """Single modality label or 'hybrid' if multiple modalities are present."""
+        if len(self.modalities) > 1:
+            return "hybrid"
+        if self.modalities:
+            return self.modalities[0]
+        return "hybrid"
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to fully JSON-serializable dictionary."""
         return {
@@ -115,15 +139,19 @@ class Result:
             "video_filename": self.video_filename,
             "start_seconds": round(float(self.start_seconds), 3),
             "end_seconds": round(float(self.end_seconds), 3),
+            "start_time": round(float(self.start_seconds), 3),
+            "end_time": round(float(self.end_seconds), 3),
             "start_formatted": self.start_formatted,
             "end_formatted": self.end_formatted,
             "span_type": self.span_type,
             "final_score": round(float(self.final_score), 4),
+            "score": round(float(self.final_score), 4),
             "visual_score": round(float(self.visual_score), 4) if self.visual_score is not None else None,
             "text_score": round(float(self.text_score), 4) if self.text_score is not None else None,
             "visual_raw_cosine": round(float(self.visual_raw_cosine), 4) if self.visual_raw_cosine is not None else None,
             "text_raw_cosine": round(float(self.text_raw_cosine), 4) if self.text_raw_cosine is not None else None,
             "modalities": list(self.modalities),
+            "modality": self.modality,
             "reason": self.reason,
             "seek_seconds": round(float(self.seek_seconds), 3),
             "video_path": str(self.video_path),

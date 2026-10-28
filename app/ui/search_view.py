@@ -142,10 +142,28 @@ def render_search_view(
             vid_record = user_videos.get(vid_id, {})
             v_title = vid_record.get("original_filename", f"Video {vid_id[:8]}")
             
-            modality = getattr(res, "modality", "hybrid")
-            score = float(getattr(res, "score", 0.0))
-            start_s = float(getattr(res, "start_time", 0.0))
-            end_s = float(getattr(res, "end_time", start_s + 5.0))
+            # Extract real Result fields with robust fallbacks
+            start_s = float(getattr(res, "start_seconds", getattr(res, "start_time", 0.0)))
+            end_s = float(getattr(res, "end_seconds", getattr(res, "end_time", start_s + 5.0)))
+            score = float(getattr(res, "final_score", getattr(res, "score", 0.0)))
+            seek_s = float(getattr(res, "seek_seconds", start_s))
+
+            # Modality resolution
+            res_modalities = getattr(res, "modalities", None)
+            if res_modalities:
+                modality = "hybrid" if len(res_modalities) > 1 else res_modalities[0]
+            else:
+                modality = getattr(res, "modality", "hybrid")
+
+            # Formatted display strings
+            start_fmt = getattr(res, "start_formatted", None) or format_timestamp(start_s)
+            end_fmt = getattr(res, "end_formatted", None) or format_timestamp(end_s)
+
+            if 0.0 < score < 0.001:
+                score_display = "<0.1% match"
+            else:
+                score_display = f"{score:.1%} match"
+
             excerpt = getattr(res, "transcript_text", "") or "Visual scene alignment"
             if len(excerpt) > 90:
                 excerpt = excerpt[:87] + "..."
@@ -158,7 +176,7 @@ def render_search_view(
                 <div class="{card_class}">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                         <span class="modality-chip modality-{modality}">{modality}</span>
-                        <span class="score-badge">{score:.1%} match</span>
+                        <span class="score-badge">{score_display}</span>
                     </div>
                     <div style="font-weight: 600; font-size: 0.95rem; color: #F8FAFC; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         {v_title}
@@ -167,7 +185,7 @@ def render_search_view(
                         <em>"{excerpt}"</em>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="timestamp-pill">⏱️ {format_timestamp(start_s)} - {format_timestamp(end_s)}</span>
+                        <span class="timestamp-pill">⏱️ {start_fmt} - {end_fmt}</span>
                     </div>
                 </div>
                 """,
@@ -175,15 +193,18 @@ def render_search_view(
             )
 
             # Button to select card
+            btn_label = f"▶️ Play Segment {idx + 1}" if not is_selected else f"✓ Selected ({start_fmt})"
+            btn_key = f"select_res_btn_{vid_id}_{int(start_s)}_{idx}"
             if st.button(
-                f"▶️ Play Segment {idx + 1}" if not is_selected else f"✓ Selected ({format_timestamp(start_s)})",
-                key=f"select_res_btn_{idx}",
+                btn_label,
+                key=btn_key,
                 use_container_width=True,
                 type="primary" if is_selected else "secondary",
             ):
                 st.session_state["selected_result_idx"] = idx
-                # Reset seek position to start of new segment
-                st.session_state[f"player_seek_{vid_id}"] = int(start_s)
+                # Cue player to this segment's seek position
+                st.session_state[f"player_seek_{vid_id}"] = int(seek_s)
+                st.session_state[f"last_result_{vid_id}"] = f"{start_s:.3f}_{end_s:.3f}"
                 st.rerun()
 
     with col_player:

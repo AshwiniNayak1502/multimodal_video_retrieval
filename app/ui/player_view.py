@@ -25,25 +25,39 @@ def render_player_view(
     all_search_hits: Optional[List[Any]] = None,
 ):
     """Renders the synchronized video player and Key Moments section."""
-    start_time = float(getattr(selected_result, "start_time", 0.0))
-    end_time = float(getattr(selected_result, "end_time", start_time + 5.0))
-    score = float(getattr(selected_result, "score", 0.0))
+    start_time = float(getattr(selected_result, "start_seconds", getattr(selected_result, "start_time", 0.0)))
+    end_time = float(getattr(selected_result, "end_seconds", getattr(selected_result, "end_time", start_time + 5.0)))
+    seek_time = float(getattr(selected_result, "seek_seconds", getattr(selected_result, "start_seconds", start_time)))
+    score = float(getattr(selected_result, "final_score", getattr(selected_result, "score", 0.0)))
     excerpt = getattr(selected_result, "transcript_text", "") or "Visual segment match"
     
+    start_fmt = getattr(selected_result, "start_formatted", None) or format_timestamp(start_time)
+    end_fmt = getattr(selected_result, "end_formatted", None) or format_timestamp(end_time)
+
     # Active seek time stored in session state
-    seek_key = f"player_seek_{video_record.get('video_id')}"
-    if seek_key not in st.session_state:
-        st.session_state[seek_key] = int(start_time)
+    video_id = video_record.get("video_id", "")
+    seek_key = f"player_seek_{video_id}"
+    last_res_key = f"last_result_{video_id}"
+
+    # Sync seek position when selected result changes or upon initial render
+    current_result_sig = f"{start_time:.3f}_{end_time:.3f}"
+    if st.session_state.get(last_res_key) != current_result_sig or seek_key not in st.session_state:
+        st.session_state[seek_key] = int(seek_time)
+        st.session_state[last_res_key] = current_result_sig
 
     current_seek = st.session_state[seek_key]
 
     # Resolve playable path (generates MP4 faststart proxy for MKV/non-web containers)
     stored_path = video_record.get("stored_path", "")
-    video_id = video_record.get("video_id", "")
     try:
         playable_path = str(ensure_playback_proxy(stored_path, video_id))
     except Exception as e:
         playable_path = stored_path
+
+    if 0.0 < score < 0.001:
+        score_display = "<0.1%"
+    else:
+        score_display = f"{score:.1%}"
 
     # Player Header
     st.markdown(
@@ -55,11 +69,11 @@ def render_player_view(
                         {video_record.get('original_filename', 'Video Player')}
                     </span>
                     <span class="timestamp-pill" style="margin-left: 10px;">
-                        Matched: {format_timestamp(start_time)} - {format_timestamp(end_time)}
+                        Matched: {start_fmt} - {end_fmt}
                     </span>
                 </div>
                 <div>
-                    <span class="score-badge">Match Score: {score:.1%}</span>
+                    <span class="score-badge">Match Score: {score_display}</span>
                 </div>
             </div>
             <div style="font-size: 0.88rem; color: #94A3B8; margin-top: 6px;">
@@ -85,7 +99,7 @@ def render_player_view(
             st.error(f"Playable video file not found on disk at: {playable_path}")
 
         # Controls under player
-        st.caption(f"Currently cued at: **{format_timestamp(current_seek)}** (Segment: {format_timestamp(start_time)} - {format_timestamp(end_time)})")
+        st.caption(f"Currently cued at: **{format_timestamp(current_seek)}** (Segment: {start_fmt} - {end_fmt})")
 
     with col_moments:
         st.markdown("#### ⏱️ Key Moments")
