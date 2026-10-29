@@ -92,7 +92,40 @@ Copy the sample environment configuration file:
 ```powershell
 Copy-Item .env.example .env
 ```
-All defaults in `.env.example` run offline with zero cloud secrets.
+All defaults in `.env.example` run offline with local Argon2id authentication. Note that when **Email Verification** or **Continue with Google** are enabled, outbound network calls take place to Gmail SMTP and Google OAuth servers. For full setup instructions, see [AUTH_SETUP.md](docs/AUTH_SETUP.md).
+
+#### Environment Variables Reference
+
+| Variable | Default | Purpose |
+| :--- | :--- | :--- |
+| `VRS_DATA_DIR` | `data` | Base directory for application state |
+| `VRS_APP_DB_PATH` | `data/app.db` | SQLite database file location |
+| `VRS_PLAYBACK_DIR` | `data/playback` | FFmpeg faststart browser playback proxy directory |
+| `VRS_MAX_UPLOAD_MB` | `2048` | Max video upload size (MB) |
+| `VRS_WHISPER_MODEL` | `tiny` | Faster-Whisper / WhisperX model size |
+| `VRS_SESSION_TTL_MINUTES` | `720` | App session duration in minutes (12 hours) |
+| `VRS_LOCKOUT_ATTEMPTS` | `5` | Failed attempts before lockout |
+| `VRS_LOCKOUT_DURATION_MINUTES` | `5` | Lockout duration in minutes |
+| `VRS_ENABLE_GOOGLE` | `false` | Enable "Continue with Google" sign-in |
+| `VRS_AUTH_SECRET` | `""` | Keyed HMAC-SHA256 secret (>= 32 chars) for verification codes |
+| `VRS_REQUIRE_EMAIL_VERIFICATION` | `true` | Enforce email verification on registration |
+| `VRS_VERIFICATION_CODE_LENGTH` | `6` | Length of verification code |
+| `VRS_VERIFICATION_TTL_MINUTES` | `10` | Code validity lifespan |
+| `VRS_VERIFICATION_MAX_ATTEMPTS` | `5` | Maximum code entry attempts before invalidation |
+| `VRS_RESEND_COOLDOWN_SECONDS` | `60` | Cooldown period between resend requests |
+| `VRS_RESEND_MAX_PER_HOUR` | `5` | Hourly resend cap per email address |
+| `VRS_EMAIL_MAX_PER_HOUR` | `50` | Global hourly email dispatch quota |
+| `VRS_SMTP_HOST` | `""` | SMTP host (e.g. `smtp.gmail.com`) |
+| `VRS_SMTP_PORT` | `587` | SMTP port (587 for STARTTLS, 465 for SSL) |
+| `VRS_SMTP_SECURITY` | `starttls` | Security mode (`starttls` or `ssl`) |
+| `VRS_SMTP_USERNAME` | `""` | Sender email address |
+| `VRS_SMTP_PASSWORD` | `""` | Google App Password (16 characters) |
+| `VRS_EMAIL_FROM` | `""` | Sender FROM address |
+| `VRS_EMAIL_FROM_NAME` | `VideoContextEngine` | Sender display name |
+| `VRS_QUERY_REWRITE` | `light` | Query normalization (`off` or `light`) |
+| `VRS_DEFAULT_TOP_K` | `5` | Default number of search results |
+| `VRS_MAX_TOP_K` | `10` | Maximum selectable top-k results |
+| `VRS_MIN_TOP_K` | `3` | Minimum selectable top-k results |
 
 ---
 
@@ -118,7 +151,7 @@ streamlit run app/streamlit_app.py
 The application will launch automatically in your default browser at `http://localhost:8501`.
 
 ### Key Features to Test in Browser:
-1. **User Authentication:** Create a local account with email, password (>= 8 chars), and full name. Argon2id hashes the credentials in `data/app.db`.
+1. **User Authentication:** Create a local account with email verification, or sign in using **Continue with Google**. Accounts feature Argon2id password hashing, single-use HMAC-SHA256 verification codes, rate limiting, and dual-logout revocation. Offline mode (`VRS_REQUIRE_EMAIL_VERIFICATION=false`) remains supported for local-only setups.
 2. **Video Upload:** Drag and drop an `.mp4` or `.mkv` video. The pipeline queues the file, extracts frames, generates word-level transcriptions via WhisperX, and creates FAISS vectors.
 3. **Cross-User Content Reuse:** If User B uploads the identical video file that User A already uploaded, the engine recognizes the SHA-256 digest and grants instant library access without redundant reprocessing.
 4. **Strict Isolation:** User B cannot see, search, or play videos uploaded by User A.

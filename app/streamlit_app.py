@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 import streamlit as st
 
 from app.db.app_db import AppDatabase, get_db
-from app.services.auth_service import logout_session, validate_session
+from app.services.auth_service import google_sign_in, logout_session, validate_session
 from app.services.ingestion_runner import IngestionRunner, recover_interrupted_jobs
 from app.services.search_service import SearchEngineWrapper, get_search_engine
 from app.settings import settings
@@ -104,8 +104,42 @@ def main():
     if session_token:
         user = validate_session(session_token, db=database)
         if not user:
-            # Token expired or invalid -> clear
+            # Token expired or invalid -> clear app state and external OIDC cookie to avoid loop
             st.session_state.clear()
+            try:
+                st.logout()
+            except Exception:
+                pass
+            st.rerun()
+
+    # Google OAuth hand-off when returning from /oauth2callback
+    if not user and hasattr(st, "user") and getattr(st.user, "is_logged_in", False):
+        tokens = getattr(st.user, "tokens", {})
+        id_token_val = None
+        if hasattr(tokens, "get"):
+            id_token_val = tokens.get("id")
+        elif hasattr(tokens, "__getitem__"):
+            try:
+                id_token_val = tokens["id"]
+            except Exception:
+                id_token_val = None
+
+        res = google_sign_in(id_token_val, db=database)
+        if res.success and res.user and res.token:
+            st.session_state["session_token"] = res.token
+            st.session_state["user"] = res.user
+            st.session_state.pop("workspace_init_error", None)
+            st.session_state.pop("google_auth_error", None)
+            st.session_state["workspace_ready"] = False
+            st.rerun()
+        else:
+            try:
+                st.logout()
+            except Exception:
+                pass
+            st.session_state["google_auth_error"] = (
+                res.error_message or "We couldn't verify your Google account. Please try again."
+            )
             st.rerun()
 
     # If unauthenticated, render Auth View (Login / Register)
@@ -141,6 +175,10 @@ def main():
                 if token:
                     logout_session(token, db=database)
                 st.session_state.clear()
+                try:
+                    st.logout()
+                except Exception:
+                    pass
                 st.rerun()
         return
 

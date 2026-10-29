@@ -3,34 +3,54 @@
 from typing import Any, Dict, List, Optional
 import streamlit as st
 from app.db.app_db import AppDatabase, get_db
-from app.services.auth_service import User, change_password, logout_session
+from app.services.auth_service import User, change_password, logout_session, set_password
 from app.services.video_service import list_user_videos
 
 
 @st.dialog("My Account")
 def show_account_dialog(user: User, db: Optional[AppDatabase] = None):
-    """Account settings dialog for password change and profile info."""
+    """Account settings dialog for password management and profile info."""
     st.markdown(f"**Name:** {user.display_name}")
     st.markdown(f"**Email:** {user.email}")
     st.markdown(f"**User ID:** `u{user.id}`")
     st.divider()
 
-    st.markdown("#### Change Password")
-    old_pw = st.text_input("Current Password", type="password", key="dialog_old_pw")
-    new_pw = st.text_input("New Password (min 8 chars, letters & digits)", type="password", key="dialog_new_pw")
-    confirm_pw = st.text_input("Confirm New Password", type="password", key="dialog_confirm_pw")
+    if getattr(user, "has_usable_password", 1) == 0:
+        st.info("You sign in with Google.")
+        st.markdown("#### Set a Password")
+        st.caption("You can optionally set a password to allow signing in directly with email and password.")
+        new_pw = st.text_input("New Password (min 8 chars, letters & digits)", type="password", key="dialog_set_new_pw")
+        confirm_pw = st.text_input("Confirm New Password", type="password", key="dialog_set_confirm_pw")
 
-    if st.button("Update Password", type="primary", key="dialog_update_pw_btn"):
-        if not old_pw or not new_pw:
-            st.error("Please fill in both current and new passwords.")
-        elif new_pw != confirm_pw:
-            st.error("New passwords do not match.")
-        else:
-            success, err = change_password(user.id, old_pw, new_pw, db=db)
-            if success:
-                st.success("Password updated successfully!")
+        if st.button("Set Password", type="primary", key="dialog_set_pw_btn"):
+            if not new_pw:
+                st.error("Please enter a new password.")
+            elif new_pw != confirm_pw:
+                st.error("New passwords do not match.")
             else:
-                st.error(err or "Failed to change password.")
+                success, err = set_password(user.id, new_pw, confirm_pw, db=db)
+                if success:
+                    st.success("Password set successfully! You can now log in with email and password.")
+                    user.has_usable_password = 1
+                else:
+                    st.error(err or "Failed to set password.")
+    else:
+        st.markdown("#### Change Password")
+        old_pw = st.text_input("Current Password", type="password", key="dialog_old_pw")
+        new_pw = st.text_input("New Password (min 8 chars, letters & digits)", type="password", key="dialog_new_pw")
+        confirm_pw = st.text_input("Confirm New Password", type="password", key="dialog_confirm_pw")
+
+        if st.button("Update Password", type="primary", key="dialog_update_pw_btn"):
+            if not old_pw or not new_pw:
+                st.error("Please fill in both current and new passwords.")
+            elif new_pw != confirm_pw:
+                st.error("New passwords do not match.")
+            else:
+                success, err = change_password(user.id, old_pw, new_pw, confirm_pw, db=db)
+                if success:
+                    st.success("Password updated successfully!")
+                else:
+                    st.error(err or "Failed to change password.")
 
 
 def render_sidebar(user: User, db: Optional[AppDatabase] = None) -> str:
@@ -164,6 +184,10 @@ def render_sidebar(user: User, db: Optional[AppDatabase] = None) -> str:
                 if token:
                     logout_session(token, db=database)
                 st.session_state.clear()
+                try:
+                    st.logout()
+                except Exception:
+                    pass
                 st.rerun()
 
     return selected_view

@@ -5,6 +5,10 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from dotenv import load_dotenv
+
+# D1 fix: load .env into environment before evaluating os.getenv defaults
+load_dotenv(override=False)
 
 
 @dataclass(frozen=True)
@@ -41,6 +45,27 @@ class Settings:
     lockout_attempts: int = int(os.getenv("VRS_LOCKOUT_ATTEMPTS", "5"))
     lockout_duration_minutes: int = int(os.getenv("VRS_LOCKOUT_DURATION_MINUTES", "5"))
     enable_google: bool = os.getenv("VRS_ENABLE_GOOGLE", "false").lower() in ("true", "1", "yes")
+
+    # Email Verification & Rate Limiting
+    auth_secret: str = os.getenv("VRS_AUTH_SECRET", "")
+    require_email_verification: bool = os.getenv(
+        "VRS_REQUIRE_EMAIL_VERIFICATION", "true"
+    ).lower() in ("true", "1", "yes")
+    verification_code_length: int = int(os.getenv("VRS_VERIFICATION_CODE_LENGTH", "6"))
+    verification_ttl_minutes: int = int(os.getenv("VRS_VERIFICATION_TTL_MINUTES", "10"))
+    verification_max_attempts: int = int(os.getenv("VRS_VERIFICATION_MAX_ATTEMPTS", "5"))
+    resend_cooldown_seconds: int = int(os.getenv("VRS_RESEND_COOLDOWN_SECONDS", "60"))
+    resend_max_per_hour: int = int(os.getenv("VRS_RESEND_MAX_PER_HOUR", "5"))
+    email_max_per_hour: int = int(os.getenv("VRS_EMAIL_MAX_PER_HOUR", "50"))
+
+    # SMTP Mailer Settings
+    smtp_host: str = os.getenv("VRS_SMTP_HOST", "")
+    smtp_port: int = int(os.getenv("VRS_SMTP_PORT", "587"))
+    smtp_security: str = os.getenv("VRS_SMTP_SECURITY", "starttls").lower()
+    smtp_username: str = os.getenv("VRS_SMTP_USERNAME", "")
+    smtp_password: str = os.getenv("VRS_SMTP_PASSWORD", "")
+    email_from: str = os.getenv("VRS_EMAIL_FROM", "")
+    email_from_name: str = os.getenv("VRS_EMAIL_FROM_NAME", "VideoContextEngine")
 
     # Search & Retrieval
     query_rewrite: str = os.getenv("VRS_QUERY_REWRITE", "light")  # "off" or "light"

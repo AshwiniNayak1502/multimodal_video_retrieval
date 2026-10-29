@@ -1,21 +1,91 @@
-"""Authentication views for VideoContextEngine (Login & Sign Up)."""
+"""Authentication views for VideoContextEngine (Login, Sign Up, & Verification)."""
 
 from typing import Optional
 import streamlit as st
+
 from app.db.app_db import AppDatabase, get_db
 from app.services.auth_service import (
     User,
     login_user,
-    register_user,
+    start_registration,
 )
+from app.settings import settings
+from app.ui.verify_email_view import render_verify_email_view
+
+
+def is_google_auth_configured() -> bool:
+    """Check if Google OpenID Connect authentication is enabled and configured."""
+    import os
+    is_enabled = (
+        os.getenv("VRS_ENABLE_GOOGLE", "").lower() in ("true", "1", "yes")
+        if "VRS_ENABLE_GOOGLE" in os.environ
+        else settings.enable_google
+    )
+    if not is_enabled:
+        return False
+    try:
+        from streamlit.runtime.secrets import secrets_singleton
+        auth_sec = secrets_singleton.get("auth", {})
+        if not auth_sec:
+            return False
+        has_direct = bool(auth_sec.get("client_id") and auth_sec.get("client_secret"))
+        google_sub = auth_sec.get("google", {})
+        has_google = bool(google_sub.get("client_id") and google_sub.get("client_secret"))
+        return has_direct or has_google
+    except Exception:
+        return False
+
+
+def render_google_button(key_suffix: str) -> None:
+    """Render Google sign-in button or honest disabled state."""
+    if is_google_auth_configured():
+        if st.button(
+            "Continue with Google",
+            key=f"google_login_btn_{key_suffix}",
+            use_container_width=True,
+            help="Sign in securely using your Google account",
+        ):
+            try:
+                from streamlit.runtime.secrets import secrets_singleton
+                auth_sec = secrets_singleton.get("auth", {})
+                if "google" in auth_sec:
+                    st.login("google")
+                else:
+                    st.login()
+            except Exception as exc:
+                st.error("Google sign-in could not be initiated. Please check server configuration.")
+    else:
+        st.markdown(
+            """
+            <div class="oauth-disabled-btn" title="Google sign-in isn't configured — see docs/AUTH_SETUP.md.">
+                <span><svg style="vertical-align: middle; margin-right: 8px;" width="18" height="18" viewBox="0 0 24 24"><path fill="#64748B" d="M21.35 11.1h-9.17v2.98h5.27c-.23 1.22-.92 2.26-1.96 2.96v2.46h3.17c1.86-1.71 2.93-4.23 2.93-7.24 0-.47-.04-.94-.1-1.39l-.14.23z"/><path fill="#64748B" d="M12.18 21c2.65 0 4.88-.88 6.51-2.38l-3.17-2.46c-.88.59-2 .94-3.34.94-2.57 0-4.75-1.73-5.53-4.06H3.34v2.54C4.98 18.77 8.32 21 12.18 21z"/><path fill="#64748B" d="M6.65 13.04c-.2-.59-.31-1.22-.31-1.87s.11-1.28.31-1.87V6.76H3.34C2.7 8.03 2.33 9.47 2.33 11.17s.37 3.14 1.01 4.41l3.31-2.54z"/><path fill="#64748B" d="M12.18 5.08c1.44 0 2.74.5 3.76 1.47l2.82-2.82C17.05 2.1 14.82 1.17 12.18 1.17 8.32 1.17 4.98 3.4 3.34 6.76l3.31 2.54c.78-2.33 2.96-4.06 5.53-4.06z"/></svg>Continue with Google (Not configured)</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def render_auth_view(db: Optional[AppDatabase] = None) -> Optional[User]:
-    """Renders the authentication screen.
-    
-    Returns the authenticated User on successful login, or None.
-    """
+    """Renders the authentication screen or verification view."""
     database = db or get_db()
+
+    # Scope CSS: suppress top-right status widget on authentication view
+    st.markdown(
+        """
+        <style>
+        [data-testid="stStatusWidget"] {
+            display: none !important;
+            visibility: hidden !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Route to email verification view if pending registration in progress
+    if st.session_state.get("pending_registration_id"):
+        render_verify_email_view(db=database)
+        return None
 
     st.markdown(
         """
@@ -31,31 +101,40 @@ def render_auth_view(db: Optional[AppDatabase] = None) -> Optional[User]:
         unsafe_allow_html=True,
     )
 
+    if st.session_state.get("google_auth_error"):
+        st.error(st.session_state.pop("google_auth_error"))
+
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         tab_login, tab_register = st.tabs(["🔑 Log In", "📝 Create Account"])
 
         with tab_login:
             st.markdown("#### Welcome Back")
-            login_email = st.text_input("Email", key="login_email_input", placeholder="name@example.com")
-            login_password = st.text_input("Password", type="password", key="login_password_input")
-
-            # Disabled Google OAuth with tooltip
+            render_google_button("login")
             st.markdown(
                 """
-                <div class="oauth-disabled-btn" title="Not configured (local mode) — all auth runs strictly offline with Argon2id.">
-                    <span><svg style="vertical-align: middle; margin-right: 8px;" width="18" height="18" viewBox="0 0 24 24"><path fill="#64748B" d="M21.35 11.1h-9.17v2.98h5.27c-.23 1.22-.92 2.26-1.96 2.96v2.46h3.17c1.86-1.71 2.93-4.23 2.93-7.24 0-.47-.04-.94-.1-1.39l-.14.23z"/><path fill="#64748B" d="M12.18 21c2.65 0 4.88-.88 6.51-2.38l-3.17-2.46c-.88.59-2 .94-3.34.94-2.57 0-4.75-1.73-5.53-4.06H3.34v2.54C4.98 18.77 8.32 21 12.18 21z"/><path fill="#64748B" d="M6.65 13.04c-.2-.59-.31-1.22-.31-1.87s.11-1.28.31-1.87V6.76H3.34C2.7 8.03 2.33 9.47 2.33 11.17s.37 3.14 1.01 4.41l3.31-2.54z"/><path fill="#64748B" d="M12.18 5.08c1.44 0 2.74.5 3.76 1.47l2.82-2.82C17.05 2.1 14.82 1.17 12.18 1.17 8.32 1.17 4.98 3.4 3.34 6.76l3.31 2.54c.78-2.33 2.96-4.06 5.53-4.06z"/></svg>Continue with Google (Disabled in Local Mode)</span>
+                <div style="display: flex; align-items: center; text-align: center; margin: 0.9rem 0; color: #64748B; font-size: 0.85rem;">
+                    <hr style="flex: 1; border: none; border-top: 1px solid #23234A; margin-right: 10px;">or<hr style="flex: 1; border: none; border-top: 1px solid #23234A; margin-left: 10px;">
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
+            login_email = st.text_input("Email", key="login_email_input", placeholder="name@example.com")
+            login_password = st.text_input("Password", type="password", key="login_password_input")
+
             if st.button("Log In", type="primary", use_container_width=True, key="login_btn"):
                 if not login_email or not login_password:
                     st.error("Please enter both email and password.")
                 else:
-                    res = login_user(login_email, login_password, db=database)
-                    if res.success and res.user and res.token:
+                    with st.spinner("Signing in…"):
+                        res = login_user(login_email, login_password, db=database)
+
+                    if res.requires_verification:
+                        st.session_state["pending_registration_id"] = res.pending_id
+                        st.session_state["pending_email"] = res.email
+                        st.rerun()
+                    elif res.success and res.user and res.token:
                         st.session_state["session_token"] = res.token
                         st.session_state["user"] = res.user
                         st.session_state.pop("workspace_init_error", None)
@@ -66,10 +145,41 @@ def render_auth_view(db: Optional[AppDatabase] = None) -> Optional[User]:
 
         with tab_register:
             st.markdown("#### Create Account")
-            reg_name = st.text_input("Full Name or Nickname", key="reg_name_input", placeholder="Alex Doe")
-            reg_email = st.text_input("Email", key="reg_email_input", placeholder="alex@example.com")
-            reg_password = st.text_input("Password (min 8 chars, letters & numbers)", type="password", key="reg_password_input")
-            reg_confirm = st.text_input("Confirm Password", type="password", key="reg_confirm_input")
+            render_google_button("register")
+            st.markdown(
+                """
+                <div style="display: flex; align-items: center; text-align: center; margin: 0.9rem 0; color: #64748B; font-size: 0.85rem;">
+                    <hr style="flex: 1; border: none; border-top: 1px solid #23234A; margin-right: 10px;">or<hr style="flex: 1; border: none; border-top: 1px solid #23234A; margin-left: 10px;">
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            default_name = st.session_state.pop("prefill_name", "")
+            default_email = st.session_state.pop("prefill_email", "")
+
+            reg_name = st.text_input(
+                "Full Name or Nickname",
+                value=default_name,
+                key="reg_name_input",
+                placeholder="Alex Doe",
+            )
+            reg_email = st.text_input(
+                "Email",
+                value=default_email,
+                key="reg_email_input",
+                placeholder="alex@example.com",
+            )
+            reg_password = st.text_input(
+                "Password (min 8 chars, letters & numbers)",
+                type="password",
+                key="reg_password_input",
+            )
+            reg_confirm = st.text_input(
+                "Confirm Password",
+                type="password",
+                key="reg_confirm_input",
+            )
 
             if st.button("Create Account", type="primary", use_container_width=True, key="reg_btn"):
                 if not reg_name.strip():
@@ -79,14 +189,20 @@ def render_auth_view(db: Optional[AppDatabase] = None) -> Optional[User]:
                 elif reg_password != reg_confirm:
                     st.error("Passwords do not match.")
                 else:
-                    res = register_user(
-                        email=reg_email,
-                        password=reg_password,
-                        confirm_password=reg_confirm,
-                        display_name=reg_name.strip(),
-                        db=database,
-                    )
-                    if res.success and res.user and res.token:
+                    with st.spinner("Sending verification email…"):
+                        res = start_registration(
+                            email=reg_email,
+                            password=reg_password,
+                            confirm_password=reg_confirm,
+                            display_name=reg_name.strip(),
+                            db=database,
+                        )
+
+                    if res.requires_verification:
+                        st.session_state["pending_registration_id"] = res.pending_id
+                        st.session_state["pending_email"] = res.email
+                        st.rerun()
+                    elif res.success and res.user and res.token:
                         st.session_state["session_token"] = res.token
                         st.session_state["user"] = res.user
                         st.session_state.pop("workspace_init_error", None)

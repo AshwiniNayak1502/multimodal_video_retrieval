@@ -55,3 +55,4 @@ Thumbs.db
 
 # Streamlit Local Secrets
 .streamlit/secrets.toml
+.streamlit/secrets.toml.example
