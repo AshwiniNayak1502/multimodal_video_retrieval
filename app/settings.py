@@ -7,7 +7,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from dotenv import load_dotenv
 
-# D1 fix: load .env into environment before evaluating os.getenv defaults
+# Initialize paths and runtime environment before evaluating settings
+from .paths import (
+    APP_DIR,
+    APP_DB_PATH,
+    DATA_DIR,
+    LOGS_DIR,
+    MODELS_DIR,
+    MODULE1_INPUT_DIR,
+    MODULE1_OUTPUT_DIR,
+    MODULE2_OUTPUT_DIR,
+    PLAYBACK_DIR,
+    USER_DATA_DIR,
+)
+
+# Load .env into environment before evaluating os.getenv defaults
 load_dotenv(override=False)
 
 
@@ -15,13 +29,13 @@ load_dotenv(override=False)
 class Settings:
     """Environment-driven application configuration."""
 
-    # Project root
-    project_root: Path = Path(__file__).resolve().parent.parent
+    # Application Code Root
+    project_root: Path = APP_DIR
+    app_dir: Path = APP_DIR
+    user_data_dir: Path = USER_DATA_DIR
 
     # Data directory
-    data_dir: Path = Path(
-        os.getenv("VRS_DATA_DIR", str(Path(__file__).resolve().parent.parent / "data"))
-    ).resolve()
+    data_dir: Path = Path(os.getenv("VRS_DATA_DIR", str(DATA_DIR))).resolve()
 
     # App SQLite database
     app_db_path: Path = Path(
@@ -30,8 +44,12 @@ class Settings:
 
     # Playback proxy directory
     playback_dir: Path = Path(
-        os.getenv("VRS_PLAYBACK_DIR", str(data_dir / "playback"))
+        os.getenv("VRS_PLAYBACK_DIR", str(PLAYBACK_DIR))
     ).resolve()
+
+    # Model and log paths
+    models_dir: Path = MODELS_DIR
+    logs_dir: Path = LOGS_DIR
 
     # Video upload and storage
     max_upload_mb: int = int(os.getenv("VRS_MAX_UPLOAD_MB", "2048"))
@@ -73,11 +91,35 @@ class Settings:
     max_top_k: int = int(os.getenv("VRS_MAX_TOP_K", "10"))
     min_top_k: int = int(os.getenv("VRS_MIN_TOP_K", "3"))
 
+    @property
+    def module1_input_dir(self) -> Path:
+        """Dynamic input root, adapting if project_root is monkeypatched in tests."""
+        if self.project_root != APP_DIR:
+            return (self.project_root / "module1" / "input" / "videos").resolve()
+        return MODULE1_INPUT_DIR
+
+    @property
+    def module1_output_dir(self) -> Path:
+        """Dynamic Module 1 output root, adapting if project_root is monkeypatched in tests."""
+        if self.project_root != APP_DIR:
+            return (self.project_root / "module1" / "output").resolve()
+        return MODULE1_OUTPUT_DIR
+
+    @property
+    def module2_output_dir(self) -> Path:
+        """Dynamic Module 2 output root, adapting if project_root is monkeypatched in tests."""
+        if self.project_root != APP_DIR:
+            return (self.project_root / "module2" / "output").resolve()
+        return MODULE2_OUTPUT_DIR
+
     def ensure_directories(self) -> None:
         """Create required runtime storage directories."""
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.app_db_path.parent.mkdir(parents=True, exist_ok=True)
         self.playback_dir.mkdir(parents=True, exist_ok=True)
+        self.module1_input_dir.mkdir(parents=True, exist_ok=True)
+        self.module1_output_dir.mkdir(parents=True, exist_ok=True)
+        self.module2_output_dir.mkdir(parents=True, exist_ok=True)
 
 
 # Default singleton instance

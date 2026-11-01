@@ -24,8 +24,28 @@ logger = logging.getLogger("app.auth")
 
 
 def _get_auth_secret() -> str:
-    """Retrieve active authentication secret from environment or settings."""
-    return os.getenv("VRS_AUTH_SECRET") or settings.auth_secret or ""
+    """Retrieve active authentication secret from environment, settings, or persistent secret.key."""
+    sec = os.getenv("VRS_AUTH_SECRET") or settings.auth_secret or ""
+    if len(sec) >= 32:
+        return sec
+
+    try:
+        from ..paths import CONFIG_DIR
+        secret_file = CONFIG_DIR / "secret.key"
+        if secret_file.is_file():
+            stored = secret_file.read_text(encoding="utf-8").strip()
+            if len(stored) >= 32:
+                return stored
+        # Automatically generate high-entropy 64-char random secret on first run
+        import secrets
+        new_secret = secrets.token_urlsafe(48)
+        secret_file.parent.mkdir(parents=True, exist_ok=True)
+        secret_file.write_text(new_secret, encoding="utf-8")
+        return new_secret
+    except Exception as exc:
+        logger.warning("Could not access or generate persistent secret.key: %s", exc)
+
+    return sec
 
 # Initialize Argon2id password hasher with secure parameters
 _ph = PasswordHasher(time_cost=2, memory_cost=65536, parallelism=1)

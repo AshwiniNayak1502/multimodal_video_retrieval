@@ -77,21 +77,38 @@ class Module1Config:
 
     # Binary tools paths
     ffmpeg_path: str = field(
-        default_factory=lambda: shutil.which("ffmpeg") or "ffmpeg"
+        default_factory=lambda: shutil.which("ffmpeg") or (
+            str(Path(__file__).resolve().parents[2] / "bin" / "ffmpeg.exe")
+            if (Path(__file__).resolve().parents[2] / "bin" / "ffmpeg.exe").is_file()
+            else "ffmpeg"
+        )
     )
     ffprobe_path: str = field(
-        default_factory=lambda: shutil.which("ffprobe") or "ffprobe"
+        default_factory=lambda: shutil.which("ffprobe") or (
+            str(Path(__file__).resolve().parents[2] / "bin" / "ffprobe.exe")
+            if (Path(__file__).resolve().parents[2] / "bin" / "ffprobe.exe").is_file()
+            else "ffprobe"
+        )
     )
 
     def __post_init__(self) -> None:
         """Resolve paths relative to base_dir if default paths are unset."""
+        user_data = os.getenv("VRS_USER_DATA_DIR")
+        user_data_path = Path(user_data).resolve() if user_data else None
+
         if not self.input_videos_dir or self.input_videos_dir == Path():
-            self.input_videos_dir = self.base_dir / "input" / "videos"
+            if user_data_path:
+                self.input_videos_dir = user_data_path / "module1" / "input" / "videos"
+            else:
+                self.input_videos_dir = self.base_dir / "input" / "videos"
         else:
             self.input_videos_dir = Path(self.input_videos_dir).resolve()
 
         if not self.output_dir or self.output_dir == Path():
-            self.output_dir = self.base_dir / "output"
+            if user_data_path:
+                self.output_dir = user_data_path / "module1" / "output"
+            else:
+                self.output_dir = self.base_dir / "output"
         else:
             self.output_dir = Path(self.output_dir).resolve()
 

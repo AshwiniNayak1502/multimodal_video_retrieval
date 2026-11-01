@@ -1,14 +1,16 @@
-"""Email delivery service using standard library smtplib with SMTP/STARTTLS/SSL support."""
+"""Email delivery service using standard library smtplib with SMTP/STARTTLS/SSL support and diagnostics."""
 
 from __future__ import annotations
 
 import logging
 import os
+import socket
 import smtplib
 import ssl
+from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Optional, Protocol
+from typing import Optional, Protocol, Tuple
 
 from ..settings import settings
 
@@ -25,6 +27,16 @@ class EmailDeliveryError(RuntimeError):
     pass
 
 
+@dataclass
+class SmtpDiagnosticResult:
+    """Structured result returned by SMTP connectivity diagnosis."""
+    success: bool
+    step_reached: str
+    error_category: Optional[str] = None
+    error_message: Optional[str] = None
+    recommendation: Optional[str] = None
+
+
 class Mailer(Protocol):
     """Protocol for mail delivery backends."""
 
@@ -37,8 +49,183 @@ class Mailer(Protocol):
         ...
 
 
+def diagnose_smtp_connection(
+    host: Optional[str] = None,
+    port: Optional[int] = None,
+    security: Optional[str] = None,
+    username: Optional[str] = None,
+    password: Optional[str] = None,
+    from_email: Optional[str] = None,
+    to_email: Optional[str] = None,
+    timeout: float = 10.0,
+) -> SmtpDiagnosticResult:
+    """Perform step-by-step diagnostic test on SMTP connection, TLS handshake, and credentials."""
+    s_host = host or os.getenv("VRS_SMTP_HOST") or settings.smtp_host
+    s_port = int(port or os.getenv("VRS_SMTP_PORT") or settings.smtp_port)
+    s_sec = (security or os.getenv("VRS_SMTP_SECURITY") or settings.smtp_security or "starttls").lower()
+    s_user = username or os.getenv("VRS_SMTP_USERNAME") or settings.smtp_username
+    s_pwd = password or os.getenv("VRS_SMTP_PASSWORD") or settings.smtp_password
+    s_from = from_email or os.getenv("VRS_EMAIL_FROM") or settings.email_from or s_user
+
+    # Step 1: Configuration check
+    if not (s_host and s_user and s_pwd):
+        missing = []
+        if not s_host: missing.append("VRS_SMTP_HOST")
+        if not s_user: missing.append("VRS_SMTP_USERNAME")
+        if not s_pwd: missing.append("VRS_SMTP_PASSWORD")
+        return SmtpDiagnosticResult(
+            success=False,
+            step_reached="Configuration Verification",
+            error_category="CONFIG_MISSING",
+            error_message=f"Missing required SMTP configuration: {', '.join(missing)}",
+            recommendation="Configure your SMTP credentials in settings or environment variables.",
+        )
+
+    # Step 2: TCP Connection & DNS Resolution
+    server = None
+    context = ssl.create_default_context()
+    try:
+        if s_sec == "ssl":
+            server = smtplib.SMTP_SSL(s_host, s_port, context=context, timeout=timeout)
+        else:
+            server = smtplib.SMTP(s_host, s_port, timeout=timeout)
+            server.ehlo()
+    except (socket.gaierror, socket.herror) as dns_err:
+        return SmtpDiagnosticResult(
+            success=False,
+            step_reached="DNS Resolution",
+            error_category="DNS_LOOKUP_FAILED",
+            error_message=f"Cannot resolve host '{s_host}': {dns_err}",
+            recommendation="Check the SMTP host spelling (e.g. smtp.gmail.com) and your internet connection.",
+        )
+    except (socket.timeout, TimeoutError) as t_err:
+        return SmtpDiagnosticResult(
+            success=False,
+            step_reached="TCP Connection",
+            error_category="CONNECTION_TIMEOUT",
+            error_message=f"Connection timed out reaching {s_host}:{s_port} ({t_err})",
+            recommendation=f"Port {s_port} may be blocked by your firewall, router, or ISP.",
+        )
+    except (ConnectionRefusedError, ConnectionResetError, OSError) as conn_err:
+        return SmtpDiagnosticResult(
+            success=False,
+            step_reached="TCP Connection",
+            error_category="CONNECTION_REFUSED",
+            error_message=f"Connection refused at {s_host}:{s_port}: {conn_err}",
+            recommendation=f"Ensure port {s_port} matches your provider's SMTP specification.",
+        )
+
+    # Step 3: TLS Handshake (for STARTTLS)
+    if s_sec != "ssl":
+        try:
+            server.starttls(context=context)
+            server.ehlo()
+        except ssl.SSLError as ssl_err:
+            if server:
+                try: server.quit()
+                except Exception: pass
+            return SmtpDiagnosticResult(
+                success=False,
+                step_reached="TLS Handshake",
+                error_category="TLS_HANDSHAKE_FAILED",
+                error_message=f"STARTTLS negotiation failed: {ssl_err}",
+                recommendation="Verify your SSL/TLS certificates and security settings (use STARTTLS for port 587).",
+            )
+        except Exception as starttls_err:
+            if server:
+                try: server.quit()
+                except Exception: pass
+            return SmtpDiagnosticResult(
+                success=False,
+                step_reached="TLS Handshake",
+                error_category="STARTTLS_ERROR",
+                error_message=f"STARTTLS command rejected: {starttls_err}",
+                recommendation="Server may not support STARTTLS on this port. Try port 465 with SSL.",
+            )
+
+    # Step 4: Authentication
+    try:
+        server.login(s_user, s_pwd)
+    except smtplib.SMTPAuthenticationError as auth_err:
+        if server:
+            try: server.quit()
+            except Exception: pass
+        code = getattr(auth_err, "smtp_code", 535)
+        err_text = str(auth_err)
+        recommendation = (
+            "Authentication failed. Please verify username and password.\n"
+            "If using Gmail:\n"
+            "  1. Ensure 2-Step Verification is enabled on your Google Account.\n"
+            "  2. Create a 16-character App Password at https://myaccount.google.com/apppasswords.\n"
+            "  3. Use the App Password (not your standard Google account password)."
+        )
+        return SmtpDiagnosticResult(
+            success=False,
+            step_reached="SMTP Authentication",
+            error_category="AUTH_FAILED_535" if code == 535 or "5.7.8" in err_text else "AUTH_ERROR",
+            error_message=f"SMTP authentication rejected (code {code}): {err_text}",
+            recommendation=recommendation,
+        )
+    except Exception as auth_gen_err:
+        if server:
+            try: server.quit()
+            except Exception: pass
+        return SmtpDiagnosticResult(
+            success=False,
+            step_reached="SMTP Authentication",
+            error_category="AUTH_EXCEPTION",
+            error_message=f"Authentication exception: {auth_gen_err}",
+            recommendation="Check provider authentication mechanisms.",
+        )
+
+    # Step 5: Optional Test Message
+    if to_email:
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["From"] = f'"{settings.email_from_name}" <{s_from}>'
+            msg["To"] = to_email
+            msg["Subject"] = f"[{settings.email_from_name}] SMTP Test Diagnostic"
+            msg.attach(MIMEText("This is an automated diagnostic test message from VideoContextEngine.", "plain"))
+            server.sendmail(s_from, [to_email], msg.as_string())
+        except smtplib.SMTPRecipientsRefused as rec_err:
+            if server:
+                try: server.quit()
+                except Exception: pass
+            return SmtpDiagnosticResult(
+                success=False,
+                step_reached="Message Delivery",
+                error_category="RECIPIENT_REFUSED",
+                error_message=f"Recipient rejected: {rec_err}",
+                recommendation=f"The server rejected delivery to {to_email}.",
+            )
+        except Exception as send_err:
+            if server:
+                try: server.quit()
+                except Exception: pass
+            return SmtpDiagnosticResult(
+                success=False,
+                step_reached="Message Delivery",
+                error_category="SEND_FAILED",
+                error_message=f"Failed sending test email: {send_err}",
+                recommendation="Check sender domain policy (SPF/DKIM) or relay permissions.",
+            )
+
+    try:
+        server.quit()
+    except Exception:
+        pass
+
+    return SmtpDiagnosticResult(
+        success=True,
+        step_reached="Complete",
+        error_category=None,
+        error_message=None,
+        recommendation="SMTP connection, TLS handshake, and credentials verified successfully."
+    )
+
+
 class SmtpMailer:
-    """Production SMTP mailer with TLS/SSL and timeout support."""
+    """Production SMTP mailer with TLS/SSL, timeout, and diagnostic error reporting."""
 
     def __init__(self, timeout: float = 10.0) -> None:
         self.timeout = timeout
@@ -86,14 +273,21 @@ class SmtpMailer:
             server.sendmail(sender, [to_email], msg.as_string())
         except EmailConfigurationError:
             raise
+        except smtplib.SMTPAuthenticationError as auth_exc:
+            logger.error("SMTP Authentication Error (535): Invalid username or password: %s", auth_exc)
+            raise EmailDeliveryError(
+                "SMTP authentication failed (535): Bad credentials. If using Gmail, you must enable 2-Step Verification and use a 16-character Google App Password."
+            ) from auth_exc
         except smtplib.SMTPResponseException as exc:
-            # Technical cause logged server-side only: class and SMTP status code
-            logger.error(
-                "SMTP response error during send: %s (code: %s)",
-                type(exc).__name__,
-                getattr(exc, "smtp_code", "unknown"),
-            )
-            raise EmailDeliveryError(f"SMTP error code {getattr(exc, 'smtp_code', 'unknown')}") from exc
+            code = getattr(exc, "smtp_code", "unknown")
+            logger.error("SMTP response error: %s (code: %s)", type(exc).__name__, code)
+            raise EmailDeliveryError(f"SMTP error code {code}") from exc
+        except (socket.timeout, TimeoutError) as t_exc:
+            logger.error("SMTP connection timeout: %s", t_exc)
+            raise EmailDeliveryError("SMTP connection timed out. Check network connection and port settings.") from t_exc
+        except (ConnectionRefusedError, ConnectionResetError, OSError) as conn_exc:
+            logger.error("SMTP connection refused: %s", conn_exc)
+            raise EmailDeliveryError("Could not connect to SMTP server. Verify server host and port.") from conn_exc
         except Exception as exc:
             logger.error("Failed to deliver email: %s", type(exc).__name__)
             raise EmailDeliveryError(f"Email delivery error: {type(exc).__name__}") from exc

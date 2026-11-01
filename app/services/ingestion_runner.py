@@ -156,21 +156,30 @@ class IngestionRunner:
         # -------------------------------------------------------------
         # STAGE 1: Module 1 subprocess (frames, audio, transcription)
         # -------------------------------------------------------------
-        m1_dir = (settings.project_root / "module1").resolve()
-        cmd_m1 = [sys.executable, "main.py", "--video", str(v_path)]
-        if settings.whisper_model:
-            cmd_m1.extend(["--whisper-model", settings.whisper_model])
+        creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        if getattr(sys, "frozen", False):
+            cmd_m1 = [sys.executable, "--run-module1", "--video", str(v_path)]
+            if settings.whisper_model:
+                cmd_m1.extend(["--whisper-model", settings.whisper_model])
+            m1_cwd = None
+        else:
+            m1_dir = (settings.project_root / "module1").resolve()
+            cmd_m1 = [sys.executable, "main.py", "--video", str(v_path)]
+            if settings.whisper_model:
+                cmd_m1.extend(["--whisper-model", settings.whisper_model])
+            m1_cwd = str(m1_dir)
 
-        logger.info("Executing Module 1 subprocess: %s (cwd=%s)", " ".join(cmd_m1), m1_dir)
+        logger.info("Executing Module 1 subprocess: %s (cwd=%s)", " ".join(cmd_m1), m1_cwd)
         try:
             p1 = subprocess.run(
                 cmd_m1,
-                cwd=str(m1_dir),
+                cwd=m1_cwd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
                 check=False,
                 timeout=600,  # 10 minutes max for long video
+                creationflags=creationflags,
             )
         except Exception as p1_exc:
             err = f"Module 1 subprocess failed to launch: {p1_exc}"
@@ -191,7 +200,8 @@ class IngestionRunner:
             return
 
         # Inspect Module 1 output metadata JSON to verify completion
-        meta_json_path = settings.project_root / "module1" / "output" / "metadata" / f"{video_id}.json"
+        m1_out = getattr(settings, "module1_output_dir", None) or (settings.project_root / "module1" / "output")
+        meta_json_path = m1_out / "metadata" / f"{video_id}.json"
         if not meta_json_path.is_file():
             err = f"Module 1 completed but metadata JSON was not written to {meta_json_path}"
             logger.error(err)
@@ -251,20 +261,26 @@ class IngestionRunner:
             (video_db_id,),
         )
 
-        m2_dir = (settings.project_root / "module2").resolve()
-        cmd_m2 = [sys.executable, "main.py", "index", "--video-id", video_id]
+        if getattr(sys, "frozen", False):
+            cmd_m2 = [sys.executable, "--run-module2", "index", "--video-id", video_id]
+            m2_cwd = None
+        else:
+            m2_dir = (settings.project_root / "module2").resolve()
+            cmd_m2 = [sys.executable, "main.py", "index", "--video-id", video_id]
+            m2_cwd = str(m2_dir)
 
-        logger.info("Executing Module 2 subprocess: %s (cwd=%s)", " ".join(cmd_m2), m2_dir)
+        logger.info("Executing Module 2 subprocess: %s (cwd=%s)", " ".join(cmd_m2), m2_cwd)
         try:
             with _indexing_lock:
                 p2 = subprocess.run(
                     cmd_m2,
-                    cwd=str(m2_dir),
+                    cwd=m2_cwd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
                     check=False,
                     timeout=600,
+                    creationflags=creationflags,
                 )
         except Exception as p2_exc:
             err = f"Module 2 subprocess failed to launch: {p2_exc}"

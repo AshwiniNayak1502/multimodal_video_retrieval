@@ -4,7 +4,9 @@ venv/
 env/
 .venv313/
 .env
+.env.*
 .env.local
+smtp*.env
 
 # Python Caches & Build Artifacts
 __pycache__/
@@ -12,7 +14,11 @@ __pycache__/
 *$py.class
 *.egg-info/
 dist/
-build/
+build/VideoContextEngine/
+!build/*.ps1
+!build/*.py
+installer_output/
+Output/
 .pytest_cache/
 
 # Databases & Runtime Data
@@ -40,9 +46,20 @@ hf_cache/
 torch_cache/
 whisper_cache/
 
+# Bundled Large Binaries
+bin/*.exe
+
 # Logs
 *.log
 logs/
+
+# Backups & Secret Files
+*.bak
+*.backup
+*.orig
+*.pem
+*.key
+client_secret*.json
 
 # Salesforce / Scratch Metadata
 .sf/
@@ -55,4 +72,3 @@ Thumbs.db
 
 # Streamlit Local Secrets
 .streamlit/secrets.toml
-.streamlit/secrets.toml.example

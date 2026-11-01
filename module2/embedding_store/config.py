@@ -58,13 +58,20 @@ class Module2Config:
 
     def __post_init__(self) -> None:
         """Resolve directory paths and set dynamic batch sizes."""
+        import os
+        user_data = os.getenv("VRS_USER_DATA_DIR")
+        user_data_path = Path(user_data).resolve() if user_data else None
+
         if not self.base_dir or self.base_dir == Path():
             self.base_dir = Path(__file__).resolve().parent.parent
         else:
             self.base_dir = Path(self.base_dir).resolve()
 
         if not self.module1_root or self.module1_root == Path():
-            self.module1_root = (self.base_dir.parent / "module1").resolve()
+            if user_data_path:
+                self.module1_root = (user_data_path / "module1").resolve()
+            else:
+                self.module1_root = (self.base_dir.parent / "module1").resolve()
         else:
             self.module1_root = Path(self.module1_root).resolve()
 
@@ -79,7 +86,10 @@ class Module2Config:
             self.module1_input_dir = Path(self.module1_input_dir).resolve()
 
         if not self.output_dir or self.output_dir == Path():
-            self.output_dir = (self.base_dir / "output").resolve()
+            if user_data_path:
+                self.output_dir = (user_data_path / "module2" / "output").resolve()
+            else:
+                self.output_dir = (self.base_dir / "output").resolve()
         else:
             self.output_dir = Path(self.output_dir).resolve()
 

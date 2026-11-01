@@ -85,7 +85,7 @@ def safe_remove_tree(dir_path: Path, retries: int = 3, delay: float = 0.1) -> No
 
 def get_storage_root() -> Path:
     """Return the base storage root under module1/input/videos."""
-    root = (settings.project_root / "module1" / "input" / "videos").resolve()
+    root = (getattr(settings, "module1_input_dir", None) or (settings.project_root / "module1" / "input" / "videos")).resolve()
     root.mkdir(parents=True, exist_ok=True)
     return root
 
@@ -104,7 +104,7 @@ def compute_video_id(video_path: Path | str) -> str:
     Loads module1/src/id_generation.py dynamically without importing WhisperX.
     """
     path = Path(video_path).resolve()
-    id_gen_path = settings.project_root / "module1" / "src" / "id_generation.py"
+    id_gen_path = (getattr(settings, "app_dir", None) or settings.project_root) / "module1" / "src" / "id_generation.py"
     if not id_gen_path.is_file():
         id_gen_path = Path(__file__).resolve().parents[2] / "module1" / "src" / "id_generation.py"
     if not id_gen_path.is_file():
@@ -293,7 +293,8 @@ def get_thumbnail_path(video_id: str) -> Optional[str]:
     """Find the first extracted frame JPEG from module1/output/frames/<video_id>."""
     if not video_id:
         return None
-    frames_dir = settings.project_root / "module1" / "output" / "frames" / video_id
+    m1_out = getattr(settings, "module1_output_dir", None) or (settings.project_root / "module1" / "output")
+    frames_dir = m1_out / "frames" / video_id
     if not frames_dir.is_dir():
         return None
     # Prefer frame_0000 or lowest timestamp
@@ -411,7 +412,12 @@ def delete_user_video(
                     sys.path.insert(0, str(m2_dir))
                 from embedding_store import purge_video_from_store
                 from embedding_store.config import Module2Config
-                m2_cfg = Module2Config(base_dir=m2_dir)
+                m2_out = getattr(settings, "module2_output_dir", None) or (m2_dir / "output")
+                m2_cfg = Module2Config(
+                    base_dir=m2_dir,
+                    output_dir=m2_out,
+                    vector_db_dir=m2_out / "vector_db",
+                )
                 purge_video_from_store(vid_id, config=m2_cfg)
             finally:
                 indexing_lock.release()
@@ -431,7 +437,7 @@ def delete_user_video(
                     logger.warning("Search engine reload error: %s", rel_exc)
 
             # 5b. Shared Module 1 files
-            m1_out = (settings.project_root / "module1" / "output").resolve()
+            m1_out = (getattr(settings, "module1_output_dir", None) or (settings.project_root / "module1" / "output")).resolve()
             for subdir, ext in [("metadata", ".json"), ("transcripts", ".json"), ("audio", ".wav")]:
                 f_path = m1_out / subdir / f"{vid_id}{ext}"
                 if is_path_safe(f_path, [m1_out]):

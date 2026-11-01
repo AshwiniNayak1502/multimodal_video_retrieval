@@ -38,6 +38,7 @@ def is_google_auth_configured() -> bool:
 
 def render_google_button(key_suffix: str) -> None:
     """Render Google sign-in button or honest disabled state."""
+    from ..services.desktop_oauth import is_desktop_google_configured, start_desktop_google_auth
     if is_google_auth_configured():
         if st.button(
             "Continue with Google",
@@ -45,15 +46,23 @@ def render_google_button(key_suffix: str) -> None:
             use_container_width=True,
             help="Sign in securely using your Google account",
         ):
-            try:
-                from streamlit.runtime.secrets import secrets_singleton
-                auth_sec = secrets_singleton.get("auth", {})
-                if "google" in auth_sec:
-                    st.login("google")
+            if is_desktop_google_configured():
+                res = start_desktop_google_auth()
+                if res.get("success"):
+                    st.session_state["desktop_oauth_flow_id"] = res["flow_id"]
+                    st.rerun()
                 else:
-                    st.login()
-            except Exception as exc:
-                st.error("Google sign-in could not be initiated. Please check server configuration.")
+                    st.error(res.get("error", "Could not start Google sign-in."))
+            else:
+                try:
+                    from streamlit.runtime.secrets import secrets_singleton
+                    auth_sec = secrets_singleton.get("auth", {})
+                    if "google" in auth_sec:
+                        st.login("google")
+                    else:
+                        st.login()
+                except Exception as exc:
+                    st.error("Google sign-in could not be initiated. Please check server configuration.")
     else:
         st.markdown(
             """
@@ -63,6 +72,43 @@ def render_google_button(key_suffix: str) -> None:
             """,
             unsafe_allow_html=True,
         )
+
+
+@st.fragment(run_every=1.5)
+def render_desktop_oauth_waiting(flow_id: str, db: AppDatabase) -> None:
+    """Poll in background for desktop Google OAuth completion in default browser."""
+    from ..services.desktop_oauth import check_flow_status, cancel_flow
+    status = check_flow_status(flow_id)
+    if status.get("status") == "completed":
+        st.session_state["session_token"] = status["session_token"]
+        st.session_state["user"] = status["user"]
+        st.session_state.pop("desktop_oauth_flow_id", None)
+        st.session_state.pop("google_auth_error", None)
+        st.rerun()
+    elif status.get("status") == "failed":
+        st.session_state["google_auth_error"] = status.get("error", "Google sign-in was not completed.")
+        st.session_state.pop("desktop_oauth_flow_id", None)
+        st.rerun()
+    else:
+        st.markdown(
+            """
+            <div style="text-align: center; padding: 2rem; background: #13132B; border: 1px solid #23234A; border-radius: 12px; margin: 2rem auto; max-width: 480px;">
+                <div style="font-size: 1.3rem; font-weight: 700; color: #F8FAFC; margin-bottom: 0.8rem;">
+                    Sign in with Google in your browser
+                </div>
+                <div style="color: #94A3B8; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;">
+                    Your default browser was opened. Complete sign-in there and you will be returned here automatically.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("Cancel Sign-In", key="cancel_desktop_oauth_btn", use_container_width=True):
+                cancel_flow(flow_id)
+                st.session_state.pop("desktop_oauth_flow_id", None)
+                st.rerun()
 
 
 def render_auth_view(db: Optional[AppDatabase] = None) -> Optional[User]:
@@ -85,6 +131,11 @@ def render_auth_view(db: Optional[AppDatabase] = None) -> Optional[User]:
     # Route to email verification view if pending registration in progress
     if st.session_state.get("pending_registration_id"):
         render_verify_email_view(db=database)
+        return None
+
+    # Route to desktop OAuth waiting view if Google OAuth in progress
+    if st.session_state.get("desktop_oauth_flow_id"):
+        render_desktop_oauth_waiting(st.session_state["desktop_oauth_flow_id"], db=database)
         return None
 
     st.markdown(

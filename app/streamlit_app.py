@@ -114,6 +114,20 @@ def main():
                 pass
             st.rerun()
 
+    # Desktop OAuth hand-off via query parameter (?desktop_auth=<handoff_token>)
+    handoff_token = st.query_params.get("desktop_auth")
+    if handoff_token and not user:
+        from app.services.desktop_oauth import consume_handoff_token
+        h_user, h_token = consume_handoff_token(handoff_token)
+        if h_user and h_token:
+            st.session_state["session_token"] = h_token
+            st.session_state["user"] = h_user
+            st.session_state.pop("workspace_init_error", None)
+            st.session_state.pop("google_auth_error", None)
+            st.session_state["workspace_ready"] = False
+            st.query_params.clear()
+            st.rerun()
+
     # Google OAuth hand-off when returning from /oauth2callback
     if not user and hasattr(st, "user") and getattr(st.user, "is_logged_in", False):
         tokens = getattr(st.user, "tokens", {})
