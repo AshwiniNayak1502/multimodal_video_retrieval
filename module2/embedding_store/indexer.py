@@ -239,6 +239,20 @@ class VideoIndexer:
                 pruned_count += 1
         return pruned_count
 
+    def purge_video(self, video_id: str) -> Tuple[int, int]:
+        """Purge a single video from the database and vector indices, persisting indices and manifest.
+
+        Returns:
+            Tuple of (removed_visual_vector_count, removed_text_vector_count).
+        """
+        vis_ids, txt_ids = self.store.delete_video(video_id)
+        if self.vis_mgr and vis_ids:
+            self.vis_mgr.remove(vis_ids)
+        if self.txt_mgr and txt_ids:
+            self.txt_mgr.remove(txt_ids)
+        self.save_indices()
+        return len(vis_ids), len(txt_ids)
+
     def index_video(
         self,
         video_record: VideoRecord,
@@ -701,3 +715,98 @@ class VideoIndexer:
                             logger.info("Self-healed %d missing text vectors for video %s.", len(new_tids), vid_id)
 
         return healed_any
+
+
+def purge_video_from_store(
+    video_id: str,
+    config: Optional[Module2Config] = None,
+) -> Tuple[int, int]:
+    """Completely purge a video and its vectors from SQLite and FAISS indices without loading ML models.
+
+    1. Deletes SQLite rows from videos (cascading to visual_vectors and text_vectors) and index_failures (committed).
+    2. Removes corresponding vector IDs from FAISS visual.index and text.index.
+    3. Atomically saves updated FAISS index files.
+    4. Updates index_manifest.json counts.
+
+    Returns:
+        Tuple of (removed_visual_vector_count, removed_text_vector_count).
+    """
+    cfg = config or Module2Config()
+    db_path = cfg.vector_db_dir / "metadata.db"
+    if not db_path.is_file():
+        return 0, 0
+
+    store = MetadataStore(db_path)
+    try:
+        vis_ids, txt_ids = store.delete_video(video_id)
+
+        vis_index_file = cfg.vector_db_dir / "visual.index"
+        txt_index_file = cfg.vector_db_dir / "text.index"
+        manifest_file = cfg.vector_db_dir / "index_manifest.json"
+
+        vis_dim = int(store.get_meta("visual_dim") or cfg.visual_dim)
+        txt_dim = int(store.get_meta("text_dim") or cfg.text_dim)
+
+        vis_ntotal = 0
+        if vis_index_file.is_file():
+            vis_mgr = VectorIndexManager.load_index(vis_index_file, dim=vis_dim, modality="visual")
+            if vis_ids:
+                vis_mgr.remove(vis_ids)
+                vis_mgr.save_index(vis_index_file)
+            vis_ntotal = vis_mgr.ntotal
+        else:
+            cur = store.connection.cursor()
+            cur.execute("SELECT COUNT(*) AS c FROM visual_vectors")
+            vis_ntotal = cur.fetchone()["c"]
+
+        txt_ntotal = 0
+        if txt_index_file.is_file():
+            txt_mgr = VectorIndexManager.load_index(txt_index_file, dim=txt_dim, modality="text")
+            if txt_ids:
+                txt_mgr.remove(txt_ids)
+                txt_mgr.save_index(txt_index_file)
+            txt_ntotal = txt_mgr.ntotal
+        else:
+            cur = store.connection.cursor()
+            cur.execute("SELECT COUNT(*) AS c FROM text_vectors")
+            txt_ntotal = cur.fetchone()["c"]
+
+        manifest_data = load_manifest(manifest_file)
+        if manifest_data:
+            if "counts" not in manifest_data or not isinstance(manifest_data["counts"], dict):
+                manifest_data["counts"] = {}
+            manifest_data["counts"]["visual"] = vis_ntotal
+            manifest_data["counts"]["text"] = txt_ntotal
+            manifest_data["saved_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            save_manifest(manifest_file, manifest_data)
+        elif vis_index_file.is_file() or txt_index_file.is_file():
+            manifest_data = {
+                "schema_version": INDEX_SCHEMA_VERSION,
+                "models": {
+                    "visual": store.get_meta("visual_model") or cfg.visual_model_name,
+                    "text": store.get_meta("text_model") or cfg.text_model_name,
+                },
+                "dims": {
+                    "visual": vis_dim,
+                    "text": txt_dim,
+                },
+                "counts": {
+                    "visual": vis_ntotal,
+                    "text": txt_ntotal,
+                },
+                "saved_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            }
+            save_manifest(manifest_file, manifest_data)
+
+        logger.info(
+            "Purged video %s from store: removed %d visual vectors, %d text vectors (remaining: %d vis, %d txt).",
+            video_id,
+            len(vis_ids),
+            len(txt_ids),
+            vis_ntotal,
+            txt_ntotal,
+        )
+        return len(vis_ids), len(txt_ids)
+    finally:
+        store.close()
+

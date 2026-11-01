@@ -10,8 +10,10 @@ import os
 import re
 import secrets
 import shutil
+import sys
+import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ..db.app_db import AppDatabase, get_db
 from ..settings import settings
@@ -19,6 +21,66 @@ from ..settings import settings
 logger = logging.getLogger("app.video")
 
 _SAFE_FILENAME_REGEX = re.compile(r"[^a-zA-Z0-9._ -]")
+_SAFE_VIDEO_ID_REGEX = re.compile(r"^[a-zA-Z0-9_\-]+$")
+
+
+def validate_video_id(video_id: str) -> bool:
+    """Validate video_id contains only alphanumeric characters, underscores, and hyphens."""
+    if not video_id or not isinstance(video_id, str):
+        return False
+    return bool(_SAFE_VIDEO_ID_REGEX.match(video_id))
+
+
+def is_path_safe(path: Path, allowed_roots: List[Path]) -> bool:
+    """Ensure path is resolved and strictly resides inside one of allowed_roots."""
+    try:
+        resolved = path.resolve()
+        for root in allowed_roots:
+            resolved_root = root.resolve()
+            if resolved == resolved_root or resolved.is_relative_to(resolved_root):
+                return True
+        return False
+    except Exception:
+        return False
+
+
+def safe_unlink_file(file_path: Path, retries: int = 3, delay: float = 0.1) -> None:
+    """Unlink file with retries for transient locks / Windows PermissionError."""
+    if not file_path.is_file():
+        return
+    for attempt in range(retries):
+        try:
+            file_path.unlink(missing_ok=True)
+            return
+        except PermissionError as pe:
+            if attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                logger.error("PermissionError unlinking %s after %d attempts: %s", file_path, retries, pe)
+                raise
+        except Exception as exc:
+            logger.error("Error unlinking %s: %s", file_path, exc)
+            raise
+
+
+def safe_remove_tree(dir_path: Path, retries: int = 3, delay: float = 0.1) -> None:
+    """Remove directory tree with retries for transient locks / Windows PermissionError."""
+    if not dir_path.is_dir():
+        return
+    for attempt in range(retries):
+        try:
+            shutil.rmtree(dir_path, ignore_errors=False)
+            return
+        except PermissionError as pe:
+            if attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                logger.error("PermissionError removing directory %s after %d attempts: %s", dir_path, retries, pe)
+                raise
+        except Exception as exc:
+            logger.error("Error removing directory %s: %s", dir_path, exc)
+            raise
+
 
 
 def get_storage_root() -> Path:
@@ -43,6 +105,8 @@ def compute_video_id(video_path: Path | str) -> str:
     """
     path = Path(video_path).resolve()
     id_gen_path = settings.project_root / "module1" / "src" / "id_generation.py"
+    if not id_gen_path.is_file():
+        id_gen_path = Path(__file__).resolve().parents[2] / "module1" / "src" / "id_generation.py"
     if not id_gen_path.is_file():
         raise FileNotFoundError(f"id_generation.py not found at {id_gen_path}")
 
@@ -264,8 +328,19 @@ def delete_user_video(
     user_id: int,
     video_db_id: int,
     db: Optional[AppDatabase] = None,
+    on_index_changed: Optional[Callable[[], None]] = None,
 ) -> Tuple[bool, str]:
-    """Remove user ownership of video. Purge physical files only when remaining refcount is 0."""
+    """Remove user ownership of video, purging files and vector embeddings safely and idempotently.
+
+    Order of operations:
+    1. Verify ownership (id AND user_id). Refuse if 'processing' or 'indexing'.
+    2. Set status='deleting' so video stops appearing in search.
+    3. Compute refcount of OTHER rows sharing the same video_id.
+    4. ALWAYS delete this row's own stored upload file and now-empty parent directory.
+    5. Only if refcount is 0, purge shared artifacts: Module 2 vectors FIRST, then Module 1
+       frames, audio, transcripts, metadata JSON, and playback proxy.
+    6. Delete app-DB row LAST. If any critical step fails, row remains 'deleting' for retry.
+    """
     database = db or get_db()
     target = database.execute_read_one(
         "SELECT * FROM videos WHERE id = ? AND user_id = ?",
@@ -274,45 +349,145 @@ def delete_user_video(
     if not target:
         return False, "Video record not found or access denied."
 
+    status = target.get("status")
+    if status in ("processing", "indexing"):
+        return False, f"Video is currently {status} and cannot be deleted. Please wait until processing completes."
+
     vid_id = target.get("video_id")
-    stored_path = target.get("stored_path")
-    playback_path = target.get("playback_path")
+    if vid_id and not validate_video_id(vid_id):
+        err = f"Security violation: invalid video_id format '{vid_id}'."
+        logger.error(err)
+        return False, err
 
-    # Remove ownership row
-    database.execute_write("DELETE FROM videos WHERE id = ?", (video_db_id,))
-
-    # Check remaining owners for this video_id
-    if vid_id:
-        remaining = database.execute_read_one(
-            "SELECT COUNT(*) AS count FROM videos WHERE video_id = ?",
-            (vid_id,),
+    # Step 2: Mark deleting immediately
+    if status != "deleting":
+        database.execute_write(
+            "UPDATE videos SET status = 'deleting' WHERE id = ?",
+            (video_db_id,),
         )
-        refcount = int(remaining["count"]) if remaining else 0
-        if refcount == 0:
-            logger.info("Refcount for video_id %s dropped to 0. Purging derived and stored files...", vid_id)
-            # Delete stored file and parent dir
-            if stored_path:
-                sp = Path(stored_path)
-                sp.unlink(missing_ok=True)
-                if sp.parent.is_dir() and not any(sp.parent.iterdir()):
-                    shutil.rmtree(sp.parent, ignore_errors=True)
 
-            # Delete playback proxy
-            if playback_path:
-                Path(playback_path).unlink(missing_ok=True)
-            elif (settings.playback_dir / f"{vid_id}.mp4").is_file():
-                (settings.playback_dir / f"{vid_id}.mp4").unlink(missing_ok=True)
+    try:
+        # Step 3: Compute refcount of other owners
+        other_refcount = 0
+        if vid_id:
+            other_owners = database.execute_read_one(
+                "SELECT COUNT(*) AS count FROM videos WHERE video_id = ? AND id != ?",
+                (vid_id, video_db_id),
+            )
+            other_refcount = int(other_owners["count"]) if other_owners else 0
 
-            # Delete module1 outputs
-            m1_out = settings.project_root / "module1" / "output"
-            (m1_out / "metadata" / f"{vid_id}.json").unlink(missing_ok=True)
-            (m1_out / "transcripts" / f"{vid_id}.json").unlink(missing_ok=True)
-            (m1_out / "audio" / f"{vid_id}.wav").unlink(missing_ok=True)
+        # Step 4: Always delete own upload file and its directory
+        stored_path = target.get("stored_path")
+        storage_root = get_storage_root()
+        if stored_path:
+            sp = Path(stored_path)
+            if not is_path_safe(sp, [storage_root]):
+                err = f"Security violation: stored_path '{stored_path}' traverses outside storage root."
+                logger.error(err)
+                return False, err
+
+            safe_unlink_file(sp)
+            parent_dir = sp.parent
+            if is_path_safe(parent_dir, [storage_root]) and parent_dir.is_dir():
+                if not any(parent_dir.iterdir()):
+                    safe_remove_tree(parent_dir)
+                    user_dir = parent_dir.parent
+                    if is_path_safe(user_dir, [storage_root]) and user_dir.is_dir() and not any(user_dir.iterdir()):
+                        safe_remove_tree(user_dir)
+
+        # Step 5: If no other owners remain, purge shared artifacts
+        if other_refcount == 0 and vid_id:
+            logger.info("Refcount for video_id %s dropped to 0. Purging derived and vector files...", vid_id)
+
+            # 5a. Module 2 data FIRST (holding shared indexing lock)
+            from .ingestion_runner import get_indexing_lock
+            indexing_lock = get_indexing_lock()
+            lock_acquired = indexing_lock.acquire(timeout=0.5)
+            if not lock_acquired:
+                return False, "Indexing is currently in progress. Please try deleting again shortly."
+            try:
+                m2_dir = (settings.project_root / "module2").resolve()
+                if str(m2_dir) not in sys.path:
+                    sys.path.insert(0, str(m2_dir))
+                from embedding_store import purge_video_from_store
+                from embedding_store.config import Module2Config
+                m2_cfg = Module2Config(base_dir=m2_dir)
+                purge_video_from_store(vid_id, config=m2_cfg)
+            finally:
+                indexing_lock.release()
+
+            # Refresh in-memory search index
+            if on_index_changed is not None:
+                try:
+                    on_index_changed()
+                except Exception as cb_exc:
+                    logger.warning("on_index_changed callback error: %s", cb_exc)
+            else:
+                try:
+                    from .search_service import _search_engine_instance
+                    if _search_engine_instance is not None:
+                        _search_engine_instance.reload()
+                except Exception as rel_exc:
+                    logger.warning("Search engine reload error: %s", rel_exc)
+
+            # 5b. Shared Module 1 files
+            m1_out = (settings.project_root / "module1" / "output").resolve()
+            for subdir, ext in [("metadata", ".json"), ("transcripts", ".json"), ("audio", ".wav")]:
+                f_path = m1_out / subdir / f"{vid_id}{ext}"
+                if is_path_safe(f_path, [m1_out]):
+                    safe_unlink_file(f_path)
+
             frames_dir = m1_out / "frames" / vid_id
-            if frames_dir.is_dir():
-                shutil.rmtree(frames_dir, ignore_errors=True)
+            if is_path_safe(frames_dir, [m1_out]):
+                safe_remove_tree(frames_dir)
 
-    return True, "Video removed from your library."
+            # 5c. Playback proxy
+            playback_path = target.get("playback_path")
+            pb_root = settings.playback_dir.resolve()
+            if playback_path:
+                pb_file = Path(playback_path)
+                if is_path_safe(pb_file, [pb_root, (settings.project_root / "data" / "playback").resolve()]):
+                    safe_unlink_file(pb_file)
+            def_pb = pb_root / f"{vid_id}.mp4"
+            if is_path_safe(def_pb, [pb_root]):
+                safe_unlink_file(def_pb)
+        elif vid_id:
+            logger.info(
+                "Refcount for video_id %s is %d. Preserving shared derived files and vectors for other owners.",
+                vid_id,
+                other_refcount,
+            )
+
+        # Step 6: Delete app DB row LAST
+        database.execute_write("DELETE FROM videos WHERE id = ?", (video_db_id,))
+        logger.info("Successfully deleted video DB ID %d (video_id=%s) for user %d.", video_db_id, vid_id, user_id)
+        return True, "Video removed from your library."
+
+    except Exception as exc:
+        err_msg = f"Failed to delete video: {exc}"
+        logger.error("Error deleting video DB ID %d for user %d: %s", video_db_id, user_id, exc, exc_info=True)
+        database.execute_write(
+            "UPDATE videos SET status = 'deleting', error_message = ? WHERE id = ?",
+            (str(exc), video_db_id),
+        )
+        return False, f"Failed to delete video: {exc}. Please retry."
+
+
+def reconcile_interrupted_deletions(db: Optional[AppDatabase] = None) -> int:
+    """Attempt to complete deletion for any rows left in 'deleting' state from an interrupted session."""
+    database = db or get_db()
+    rows = database.execute_read("SELECT id, user_id FROM videos WHERE status = 'deleting'")
+    cleaned = 0
+    for r in rows:
+        ok, msg = delete_user_video(user_id=r["user_id"], video_db_id=r["id"], db=database)
+        if ok:
+            cleaned += 1
+        else:
+            logger.warning("Could not reconcile deleting video id %d on startup: %s", r["id"], msg)
+    if cleaned > 0:
+        logger.info("Reconciled %d interrupted video deletion(s) from prior session.", cleaned)
+    return cleaned
+
 
 
 def retry_failed_video(

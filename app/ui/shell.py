@@ -135,6 +135,12 @@ def render_sidebar(user: User, db: Optional[AppDatabase] = None) -> str:
                 elif status in ("processing", "indexing"):
                     dot_class = "status-processing"
                     badge_text = stage or status
+                elif status == "pending":
+                    dot_class = "status-processing"
+                    badge_text = "Pending"
+                elif status == "deleting":
+                    dot_class = "status-failed"
+                    badge_text = "Deleting..."
                 else:
                     dot_class = "status-failed"
                     badge_text = "Failed"

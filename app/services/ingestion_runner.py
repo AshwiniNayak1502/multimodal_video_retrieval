@@ -19,10 +19,24 @@ from .playback_service import ensure_playback_proxy
 
 logger = logging.getLogger("app.ingestion")
 
+# Process-level lock serializing Module 2 indexing subprocesses and vector store deletions
+_indexing_lock = threading.Lock()
+
+
+def get_indexing_lock() -> threading.Lock:
+    """Return the process-wide lock serializing Module 2 indexing and vector purging."""
+    return _indexing_lock
+
 
 def recover_interrupted_jobs(db: Optional[AppDatabase] = None) -> int:
-    """Mark any jobs left in 'processing' or 'indexing' state as failed with retry enabled."""
+    """Mark any jobs left in 'processing' or 'indexing' state as failed with retry enabled, and reconcile deletions."""
     database = db or get_db()
+    try:
+        from .video_service import reconcile_interrupted_deletions
+        reconcile_interrupted_deletions(database)
+    except Exception as del_exc:
+        logger.warning("Error reconciling interrupted deletions on startup: %s", del_exc)
+
     rows = database.execute_write(
         """
         UPDATE videos
@@ -242,15 +256,16 @@ class IngestionRunner:
 
         logger.info("Executing Module 2 subprocess: %s (cwd=%s)", " ".join(cmd_m2), m2_dir)
         try:
-            p2 = subprocess.run(
-                cmd_m2,
-                cwd=str(m2_dir),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=False,
-                timeout=600,
-            )
+            with _indexing_lock:
+                p2 = subprocess.run(
+                    cmd_m2,
+                    cwd=str(m2_dir),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=False,
+                    timeout=600,
+                )
         except Exception as p2_exc:
             err = f"Module 2 subprocess failed to launch: {p2_exc}"
             logger.error(err)

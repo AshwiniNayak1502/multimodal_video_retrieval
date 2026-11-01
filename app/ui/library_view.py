@@ -1,6 +1,6 @@
 """Video Library view showing user videos, metadata, thumbnails, retry, and delete."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 from pathlib import Path
 import streamlit as st
 from app.db.app_db import AppDatabase, get_db
@@ -10,17 +10,52 @@ from app.services.ingestion_runner import IngestionRunner
 
 
 @st.dialog("Confirm Deletion")
-def show_delete_confirmation(video: Dict[str, Any], user: User, db: Optional[AppDatabase] = None):
+def show_delete_confirmation(
+    video: Dict[str, Any],
+    user: User,
+    db: Optional[AppDatabase] = None,
+    on_index_changed: Optional[Callable[[], None]] = None,
+):
     """Confirmation modal before deleting a video."""
     st.warning(f"Are you sure you want to delete **{video.get('original_filename')}** from your library?")
     st.caption("If other users also have this video in their library, their copy remains intact.")
     
+    is_deleting = st.session_state.get(f"is_deleting_{video['id']}", False)
     col_yes, col_no = st.columns(2)
     with col_yes:
-        if st.button("🗑️ Yes, Delete", type="primary", use_container_width=True, key=f"confirm_del_btn_{video['id']}"):
-            delete_user_video(video["id"], user.id, db=db)
-            st.success("Video deleted from your library.")
-            st.rerun()
+        if st.button(
+            "🗑️ Yes, Delete",
+            type="primary",
+            use_container_width=True,
+            key=f"confirm_del_btn_{video['id']}",
+            disabled=is_deleting,
+        ):
+            st.session_state[f"is_deleting_{video['id']}"] = True
+            success, message = delete_user_video(
+                user_id=user.id,
+                video_db_id=video["id"],
+                db=db,
+                on_index_changed=on_index_changed,
+            )
+            st.session_state.pop(f"is_deleting_{video['id']}", None)
+            if success:
+                st.session_state["flash_success"] = message or "Video deleted from your library."
+                # Clear stale search and player session state
+                st.session_state.pop("search_response_cache", None)
+                st.session_state.pop("selected_result_idx", None)
+                st.session_state.pop("search_active_query", None)
+                vid_id = video.get("video_id")
+                if vid_id:
+                    st.session_state.pop(f"player_seek_{vid_id}", None)
+                    st.session_state.pop(f"last_result_{vid_id}", None)
+                if on_index_changed is not None:
+                    try:
+                        on_index_changed()
+                    except Exception as exc:
+                        pass
+                st.rerun()
+            else:
+                st.error(message or "Failed to delete video.")
     with col_no:
         if st.button("Cancel", use_container_width=True, key=f"cancel_del_btn_{video['id']}"):
             st.rerun()
@@ -30,9 +65,14 @@ def render_library_view(
     ingestion_runner: IngestionRunner,
     user: User,
     db: Optional[AppDatabase] = None,
+    on_index_changed: Optional[Callable[[], None]] = None,
 ):
     """Renders the library of videos owned by the authenticated user."""
     database = db or get_db()
+
+    flash_msg = st.session_state.pop("flash_success", None)
+    if flash_msg:
+        st.success(flash_msg)
 
     st.markdown(
         """
@@ -100,6 +140,8 @@ def render_library_view(
                     status_badge = f'<span class="score-badge" style="background: rgba(245, 158, 11, 0.15); color: #FBBF24;">⏳ {stage or status}...</span>'
                 elif status == "pending":
                     status_badge = '<span class="score-badge" style="background: rgba(148, 163, 184, 0.15); color: #94A3B8;">🕒 Pending Queue</span>'
+                elif status == "deleting":
+                    status_badge = f'<span class="score-badge" style="background: rgba(239, 68, 68, 0.15); color: #F87171;">🗑️ Deletion incomplete, retry: {video.get("error_message") or "Interrupted"}</span>'
                 else:
                     status_badge = f'<span class="score-badge" style="background: rgba(239, 68, 68, 0.15); color: #F87171;">❌ Failed: {video.get("error_message") or "Interrupted"}</span>'
 
@@ -130,7 +172,7 @@ def render_library_view(
                         st.rerun()
 
                 if st.button("🗑️ Delete", key=f"del_btn_{video['id']}", use_container_width=True):
-                    show_delete_confirmation(video, user, db=database)
+                    show_delete_confirmation(video, user, db=database, on_index_changed=on_index_changed)
 
             # Technical details expander
             with st.expander("🔍 Extraction & Indexing Details"):

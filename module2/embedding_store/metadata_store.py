@@ -311,6 +311,7 @@ class MetadataStore:
 
         cur.execute("DELETE FROM videos WHERE video_id = ?", (video_id,))
         cur.execute("DELETE FROM index_failures WHERE video_id = ?", (video_id,))
+        self.connection.commit()
 
         logger.info(
             "Purged video %s (removed %d visual vectors, %d text vectors).",

@@ -9,6 +9,7 @@ import streamlit as st
 from app.db.app_db import AppDatabase, get_db
 from app.services.auth_service import google_sign_in, logout_session, validate_session
 from app.services.ingestion_runner import IngestionRunner, recover_interrupted_jobs
+from app.services.video_service import reconcile_interrupted_deletions
 from app.services.search_service import SearchEngineWrapper, get_search_engine
 from app.settings import settings
 from app.ui.auth_view import render_auth_view
@@ -54,6 +55,7 @@ def get_ingestion_worker() -> IngestionRunner:
     db = get_app_database()
     # Recover any crashed/interrupted jobs from previous runs
     recover_interrupted_jobs(db)
+    reconcile_interrupted_deletions(db)
     
     search_wrapper = get_search_wrapper()
     runner = IngestionRunner(
@@ -237,7 +239,12 @@ def main():
     elif active_view == "upload":
         render_upload_view(ingestion_runner, user, db=database)
     elif active_view == "library":
-        render_library_view(ingestion_runner, user, db=database)
+        render_library_view(
+            ingestion_runner,
+            user,
+            db=database,
+            on_index_changed=search_wrapper.reload,
+        )
     else:
         render_search_view(search_wrapper, user, db=database)
 
