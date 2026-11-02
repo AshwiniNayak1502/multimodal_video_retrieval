@@ -249,3 +249,4 @@ Based on static code analysis of `app/services/auth_service.py`, `app/services/e
 4. No OTP was generated or sent.
 5. If the Security Notice send encountered any transient SMTP connection hiccup (or if the subsequent retry/resend failed), the broad `except Exception` collapsed the error into `"We couldn't send the verification email. Check the email address or try again."`.
 6. Furthermore, even when the Security Notice send succeeded, the UI routed to the verification code entry view claiming a 6-digit verification code had been sent, misleading the user.
+
