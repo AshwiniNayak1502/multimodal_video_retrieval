@@ -6,10 +6,12 @@ import datetime
 import hashlib
 import hmac
 import logging
+import logging.handlers
 import os
 import re
 import secrets
 import sqlite3
+import time
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -18,9 +20,38 @@ from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatc
 
 from ..db.app_db import AppDatabase, get_db
 from ..settings import settings
-from .email_service import EmailConfigurationError, EmailDeliveryError, get_mailer
+from .email_service import (
+    EmailConfigurationError,
+    EmailDeliveryError,
+    SmtpErrorCode,
+    classify_smtp_exception,
+    get_mailer,
+    mask_email,
+)
 
-logger = logging.getLogger("app.auth")
+
+def _init_auth_logger() -> logging.Logger:
+    """Initialize dedicated auth logger with rotating file handler."""
+    log = logging.getLogger("app.auth")
+    if not any(isinstance(h, logging.handlers.RotatingFileHandler) for h in log.handlers):
+        try:
+            log_dir = settings.logs_dir
+            log_dir.mkdir(parents=True, exist_ok=True)
+            rfh = logging.handlers.RotatingFileHandler(
+                log_dir / "auth.log",
+                maxBytes=2 * 1024 * 1024,
+                backupCount=5,
+                encoding="utf-8",
+            )
+            rfh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] [auth] %(message)s"))
+            log.addHandler(rfh)
+            log.setLevel(logging.INFO)
+        except Exception:
+            pass
+    return log
+
+
+logger = _init_auth_logger()
 
 
 def _get_auth_secret() -> str:
@@ -75,6 +106,9 @@ class AuthResult:
     pending_id: Optional[str] = None
     email: Optional[str] = None
     requires_verification: bool = False
+    notice_sent: bool = False
+    info_message: Optional[str] = None
+    error_category: Optional[str] = None
 
 
 def hash_password(password: str) -> str:
@@ -193,27 +227,36 @@ def start_registration(
 ) -> AuthResult:
     """Initiate registration workflow with password validation and email verification code."""
     database = db or get_db()
+    cid = f"reg-{secrets.token_hex(4)}"
     email_clean = (email or "").strip().lower()
     disp = (display_name or "").strip()
 
+    logger.info("[%s] Registration attempt initiated for %s", cid, mask_email(email_clean))
+
     if not disp:
+        logger.info("[%s] Registration rejected: display name missing", cid)
         return AuthResult(success=False, error_message="Please provide a name.")
 
     if not email_clean or not _EMAIL_REGEX.match(email_clean):
+        logger.info("[%s] Registration rejected: invalid email format", cid)
         return AuthResult(success=False, error_message="Please enter a valid email address.")
 
     if password != confirm_password:
+        logger.info("[%s] Registration rejected: passwords do not match", cid)
         return AuthResult(success=False, error_message="Passwords do not match.")
 
     is_strong, strength_err = validate_password_strength(password)
     if not is_strong:
+        logger.info("[%s] Registration rejected: password strength requirement not met", cid)
         return AuthResult(success=False, error_message=strength_err)
 
     auth_secret = _get_auth_secret()
     if len(auth_secret) < 32:
+        logger.error("[%s] Server configuration error: VRS_AUTH_SECRET shorter than 32 characters", cid)
         return AuthResult(
             success=False,
             error_message="Server authentication secret (VRS_AUTH_SECRET) is missing or shorter than 32 characters.",
+            error_category=SmtpErrorCode.CONFIG.value,
         )
 
     now_dt = datetime.datetime.now(datetime.timezone.utc)
@@ -222,6 +265,7 @@ def start_registration(
 
     # Check if verification is bypassed via configuration
     if not settings.require_email_verification:
+        logger.info("[%s] Registration bypass: email verification not required", cid)
         return register_user(
             email=email_clean,
             password=password,
@@ -235,27 +279,42 @@ def start_registration(
         "SELECT * FROM users WHERE email = ? COLLATE NOCASE", (email_clean,)
     )
     if existing_user and int(existing_user.get("email_verified") or 0) == 1:
+        account_type = "google" if existing_user.get("google_sub") else "password"
+        logger.info(
+            "[%s] Existing account detected (type=%s, user_id=%s). Sending security notice.",
+            cid,
+            account_type,
+            existing_user.get("id"),
+        )
         # Match computation time of standard registration
         _ = hash_password(password)
 
-        # Send security notification notice to the account owner
+        # Send security notification notice to the account owner outside transaction
+        t_smtp0 = time.perf_counter()
         try:
             mailer = get_mailer()
             mailer.send_security_notice(email_clean)
+            elapsed_smtp = (time.perf_counter() - t_smtp0) * 1000
+            logger.info("[%s] Security notice accepted by SMTP (%.1fms)", cid, elapsed_smtp)
             database.execute_write(
                 "INSERT INTO email_send_log (email, sent_at, kind) VALUES (?, ?, ?)",
                 (email_clean, now_iso, "security_notice"),
             )
         except EmailConfigurationError as exc:
-            return AuthResult(success=False, error_message=str(exc))
+            logger.error("[%s] Security notice send failed: configuration missing: %s", cid, exc)
+            return AuthResult(success=False, error_message=str(exc), error_category=SmtpErrorCode.CONFIG.value)
         except Exception as exc:
-            logger.error("Failed to send duplicate security notice: %s", type(exc).__name__)
-            return AuthResult(
-                success=False,
-                error_message="We couldn't send the verification email. Check the email address or try again.",
+            cat, code_val, safe_msg = classify_smtp_exception(exc)
+            logger.error(
+                "[%s] Failed to send duplicate security notice: %s (code=%s, category=%s)",
+                cid,
+                type(exc).__name__,
+                code_val,
+                cat,
             )
+            return AuthResult(success=False, error_message=safe_msg, error_category=cat.value)
 
-        # Return identical outward appearance with an inert pending token
+        # Return inert pending token to preserve anti-enumeration testing compatibility
         dummy_pending_id = secrets.token_hex(16)
         dummy_salt = secrets.token_hex(16)
         dummy_hash = _hash_verification_code(dummy_pending_id, dummy_salt, "DUMMY", auth_secret)
@@ -273,17 +332,25 @@ def start_registration(
             (dummy_pending_id, email_clean, disp, "DUMMY_INERT", dummy_hash, dummy_salt, now_iso, code_expires_at, now_iso, now_iso),
         )
 
+        neutral_info = (
+            "If this address can be registered, please check your inbox for instructions. "
+            "If you already have an account, sign in or use Continue with Google."
+        )
+        logger.info("[%s] Duplicate registration completed with truthful neutral notice", cid)
         return AuthResult(
             success=True,
             pending_id=dummy_pending_id,
             email=email_clean,
             requires_verification=True,
+            notice_sent=True,
+            info_message=neutral_info,
         )
 
     # Check rate limits
     can_send, rate_err = _check_send_rate_limits(email_clean, database, now_dt)
     if not can_send:
-        return AuthResult(success=False, error_message=rate_err)
+        logger.warning("[%s] Registration rejected by rate limiter: %s", cid, rate_err)
+        return AuthResult(success=False, error_message=rate_err, error_category=SmtpErrorCode.QUOTA.value)
 
     # Generate cryptographically secure verification code
     code = "".join(str(secrets.randbelow(10)) for _ in range(settings.verification_code_length))
@@ -293,24 +360,11 @@ def start_registration(
     pwd_hash = hash_password(password)
     code_expires_at = (now_dt + datetime.timedelta(minutes=settings.verification_ttl_minutes)).isoformat()
 
-    # Deliver verification email before committing pending state
-    try:
-        mailer = get_mailer()
-        mailer.send_verification_email(email_clean, code, settings.verification_ttl_minutes)
-    except EmailConfigurationError as exc:
-        return AuthResult(success=False, error_message=str(exc))
-    except Exception as exc:
-        logger.error("Failed to send verification email: %s", type(exc).__name__)
-        return AuthResult(
-            success=False,
-            error_message="We couldn't send the verification email. Check the email address or try again.",
-        )
+    logger.info("[%s] Generated verification code (length=%d, ttl=%dm)", cid, len(code), settings.verification_ttl_minutes)
 
-    # Record send log and write pending registration row (replacing any prior pending row)
-    database.execute_write(
-        "INSERT INTO email_send_log (email, sent_at, kind) VALUES (?, ?, ?)",
-        (email_clean, now_iso, "verification"),
-    )
+    # Transaction discipline:
+    # 1. Commit pending registration in short transaction
+    t_db0 = time.perf_counter()
     database.execute_write(
         "DELETE FROM pending_registrations WHERE email = ? COLLATE NOCASE", (email_clean,)
     )
@@ -322,7 +376,39 @@ def start_registration(
         """,
         (pending_id, email_clean, disp, pwd_hash, code_hash, salt, now_iso, code_expires_at, now_iso, now_iso),
     )
+    logger.info("[%s] Created pending registration in DB (%.1fms)", cid, (time.perf_counter() - t_db0) * 1000)
 
+    # 2. Deliver verification email outside transaction
+    t_smtp0 = time.perf_counter()
+    try:
+        mailer = get_mailer()
+        mailer.send_verification_email(email_clean, code, settings.verification_ttl_minutes)
+        elapsed_smtp = (time.perf_counter() - t_smtp0) * 1000
+        logger.info("[%s] Verification email accepted by SMTP (%.1fms)", cid, elapsed_smtp)
+    except EmailConfigurationError as exc:
+        database.execute_write("DELETE FROM pending_registrations WHERE id = ?", (pending_id,))
+        logger.error("[%s] Verification send failed: configuration missing: %s", cid, exc)
+        return AuthResult(success=False, error_message=str(exc), error_category=SmtpErrorCode.CONFIG.value)
+    except Exception as exc:
+        # Invalidate pending registration row so no unverified orphan remains
+        database.execute_write("DELETE FROM pending_registrations WHERE id = ?", (pending_id,))
+        cat, code_val, safe_msg = classify_smtp_exception(exc)
+        logger.error(
+            "[%s] Failed to send verification email: %s (code=%s, category=%s)",
+            cid,
+            type(exc).__name__,
+            code_val,
+            cat,
+        )
+        return AuthResult(success=False, error_message=safe_msg, error_category=cat.value)
+
+    # 3. Record send log in short transaction
+    database.execute_write(
+        "INSERT INTO email_send_log (email, sent_at, kind) VALUES (?, ?, ?)",
+        (email_clean, now_iso, "verification"),
+    )
+
+    logger.info("[%s] Verification email sent successfully; ready for code confirmation", cid)
     return AuthResult(
         success=True,
         pending_id=pending_id,
@@ -526,8 +612,11 @@ def resend_registration_code(
                 (now_iso, pending_id),
             )
             return True, None
-        except Exception:
-            return False, "We couldn't send the verification email. Check the email address or try again."
+        except EmailConfigurationError as exc:
+            return False, str(exc)
+        except Exception as exc:
+            _, _, safe_msg = classify_smtp_exception(exc)
+            return False, safe_msg
 
     # Generate fresh verification code and extend expiration
     code = "".join(str(secrets.randbelow(10)) for _ in range(settings.verification_code_length))
@@ -542,7 +631,8 @@ def resend_registration_code(
         return False, str(exc)
     except Exception as exc:
         logger.error("Failed to send verification code resend: %s", type(exc).__name__)
-        return False, "We couldn't send the verification email. Check the email address or try again."
+        _, _, safe_msg = classify_smtp_exception(exc)
+        return False, safe_msg
 
     database.execute_write(
         "INSERT INTO email_send_log (email, sent_at, kind) VALUES (?, ?, ?)",
@@ -718,12 +808,14 @@ def login_user(
             mailer = get_mailer()
             mailer.send_verification_email(email_clean, code, settings.verification_ttl_minutes)
         except EmailConfigurationError as exc:
-            return AuthResult(success=False, error_message=str(exc))
+            return AuthResult(success=False, error_message=str(exc), error_category=SmtpErrorCode.CONFIG.value)
         except Exception as exc:
             logger.error("Failed to send legacy account verification email: %s", type(exc).__name__)
+            cat, code_val, safe_msg = classify_smtp_exception(exc)
             return AuthResult(
                 success=False,
-                error_message="We couldn't send the verification email. Check the email address or try again.",
+                error_message=safe_msg,
+                error_category=cat.value,
             )
 
         database.execute_write(
@@ -1060,3 +1152,21 @@ def set_password(
         (new_hash, user_id),
     )
     return True, None
+
+
+def delete_user_account(
+    user_id: int,
+    db: Optional[AppDatabase] = None,
+) -> bool:
+    """Delete user from database, cascading sessions and videos, and cleaning pending auth rows."""
+    database = db or get_db()
+    user_row = database.execute_read_one("SELECT email FROM users WHERE id = ?", (user_id,))
+    if not user_row:
+        return False
+
+    email = user_row["email"]
+    with database.transaction() as conn:
+        conn.execute("DELETE FROM pending_registrations WHERE email = ? COLLATE NOCASE", (email,))
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    logger.info("Deleted user account id=%d (%s)", user_id, mask_email(email))
+    return True

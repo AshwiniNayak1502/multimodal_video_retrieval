@@ -22,7 +22,11 @@ from .paths import (
 )
 
 # Load .env into environment before evaluating os.getenv defaults
-load_dotenv(override=False)
+_env_path = APP_DIR / ".env"
+if _env_path.is_file():
+    load_dotenv(dotenv_path=_env_path, override=False)
+else:
+    load_dotenv(override=False)
 
 
 @dataclass(frozen=True)

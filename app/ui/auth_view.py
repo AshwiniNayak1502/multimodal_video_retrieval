@@ -240,7 +240,7 @@ def render_auth_view(db: Optional[AppDatabase] = None) -> Optional[User]:
                 elif reg_password != reg_confirm:
                     st.error("Passwords do not match.")
                 else:
-                    with st.spinner("Sending verification email…"):
+                    with st.spinner("Processing registration…"):
                         res = start_registration(
                             email=reg_email,
                             password=reg_password,
@@ -249,7 +249,12 @@ def render_auth_view(db: Optional[AppDatabase] = None) -> Optional[User]:
                             db=database,
                         )
 
-                    if res.requires_verification:
+                    if res.notice_sent:
+                        st.info(
+                            res.info_message
+                            or "If this address can be registered, please check your inbox for next steps. If you already have an account, sign in or use Continue with Google."
+                        )
+                    elif res.requires_verification:
                         st.session_state["pending_registration_id"] = res.pending_id
                         st.session_state["pending_email"] = res.email
                         st.rerun()

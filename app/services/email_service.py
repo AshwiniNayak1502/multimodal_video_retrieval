@@ -2,19 +2,46 @@
 
 from __future__ import annotations
 
+import email.utils
+from enum import Enum
 import logging
 import os
+import re
 import socket
 import smtplib
 import ssl
+import time
 from dataclasses import dataclass
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from typing import Optional, Protocol, Tuple
+from email.message import EmailMessage
+from typing import Dict, List, Optional, Protocol, Tuple
 
 from ..settings import settings
 
 logger = logging.getLogger("app.email")
+
+
+class SmtpErrorCode(str, Enum):
+    """Standardized error categories for SMTP and email delivery failures."""
+    CONFIG = "CONFIG"
+    AUTH = "AUTH"
+    CONNECT = "CONNECT"
+    TLS = "TLS"
+    RECIPIENT = "RECIPIENT"
+    QUOTA = "QUOTA"
+    TRANSIENT = "TRANSIENT"
+    UNKNOWN = "UNKNOWN"
+
+
+USER_FACING_SMTP_MESSAGES: Dict[SmtpErrorCode, str] = {
+    SmtpErrorCode.CONFIG: "Email delivery isn't configured on this server. Please check SMTP settings.",
+    SmtpErrorCode.AUTH: "Email service authentication failed. Please verify the sender credentials.",
+    SmtpErrorCode.CONNECT: "Unable to reach the email server. Please check your network connection or try again later.",
+    SmtpErrorCode.TLS: "Secure connection to email server failed. Please verify security settings.",
+    SmtpErrorCode.RECIPIENT: "The recipient address was rejected by the mail server. Please check the address.",
+    SmtpErrorCode.QUOTA: "Email sending limit or quota exceeded. Please try again later.",
+    SmtpErrorCode.TRANSIENT: "Temporary email delivery failure. Please try again in a few moments.",
+    SmtpErrorCode.UNKNOWN: "We couldn't send the verification email. Check the email address or try again.",
+}
 
 
 class EmailConfigurationError(RuntimeError):
@@ -23,8 +50,19 @@ class EmailConfigurationError(RuntimeError):
 
 
 class EmailDeliveryError(RuntimeError):
-    """Raised when email delivery fails technically."""
-    pass
+    """Raised when email delivery fails technically with categorized diagnostic metadata."""
+
+    def __init__(
+        self,
+        message: str,
+        category: SmtpErrorCode = SmtpErrorCode.UNKNOWN,
+        smtp_code: Optional[int] = None,
+        refused_recipients: Optional[List[str]] = None,
+    ) -> None:
+        super().__init__(message)
+        self.category = category
+        self.smtp_code = smtp_code
+        self.refused_recipients = refused_recipients or []
 
 
 @dataclass
@@ -35,6 +73,112 @@ class SmtpDiagnosticResult:
     error_category: Optional[str] = None
     error_message: Optional[str] = None
     recommendation: Optional[str] = None
+
+
+@dataclass
+class EmailDeliveryResult:
+    """Result returned by email send operations."""
+    success: bool
+    error_category: Optional[SmtpErrorCode] = None
+    error_message: Optional[str] = None
+    smtp_code: Optional[int] = None
+    refused_recipients: Optional[List[str]] = None
+
+
+def classify_smtp_exception(exc: Exception) -> Tuple[SmtpErrorCode, Optional[int], str]:
+    """Classify SMTP/network exceptions into standardized category, code, and user-safe message."""
+    if isinstance(exc, EmailConfigurationError):
+        return SmtpErrorCode.CONFIG, None, str(exc)
+
+    if isinstance(exc, EmailDeliveryError):
+        cat = exc.category
+        code = exc.smtp_code
+        user_msg = USER_FACING_SMTP_MESSAGES.get(cat, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.UNKNOWN])
+        return cat, code, user_msg
+
+    if isinstance(exc, smtplib.SMTPAuthenticationError):
+        code = getattr(exc, "smtp_code", 535)
+        return SmtpErrorCode.AUTH, code, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.AUTH]
+
+    if isinstance(exc, ssl.SSLError):
+        return SmtpErrorCode.TLS, None, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.TLS]
+
+    if isinstance(exc, smtplib.SMTPRecipientsRefused):
+        return SmtpErrorCode.RECIPIENT, 550, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.RECIPIENT]
+
+    if isinstance(exc, smtplib.SMTPServerDisconnected):
+        return SmtpErrorCode.TRANSIENT, None, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.TRANSIENT]
+
+    if isinstance(exc, smtplib.SMTPResponseException):
+        code = getattr(exc, "smtp_code", -1)
+        err_str = str(exc).lower()
+        if code in (421, 450, 451, 452) or (400 <= code < 500):
+            return SmtpErrorCode.TRANSIENT, code, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.TRANSIENT]
+        if "quota" in err_str or "daily limit" in err_str or "5.4.5" in err_str:
+            return SmtpErrorCode.QUOTA, code, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.QUOTA]
+        if code in (550, 551, 552, 553, 554):
+            return SmtpErrorCode.RECIPIENT, code, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.RECIPIENT]
+        return SmtpErrorCode.UNKNOWN, code, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.UNKNOWN]
+
+    if isinstance(exc, (socket.timeout, TimeoutError)):
+        return SmtpErrorCode.CONNECT, None, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.CONNECT]
+
+    if isinstance(exc, (ConnectionRefusedError, ConnectionResetError)):
+        return SmtpErrorCode.CONNECT, None, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.CONNECT]
+
+    # In Python 3.13, SMTPException subclasses OSError. Only treat non-SMTP OS/socket errors as CONNECT.
+    if isinstance(exc, (socket.error, OSError)) and not isinstance(exc, smtplib.SMTPException):
+        return SmtpErrorCode.CONNECT, None, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.CONNECT]
+
+    return SmtpErrorCode.UNKNOWN, None, USER_FACING_SMTP_MESSAGES[SmtpErrorCode.UNKNOWN]
+
+
+def mask_email(email_addr: str) -> str:
+    """Mask email address for privacy-safe logs and display (e.g. alex@example.com -> a***x@example.com)."""
+    if not email_addr or "@" not in email_addr:
+        return email_addr or ""
+    local, domain = email_addr.split("@", 1)
+    if len(local) <= 2:
+        masked_local = local[0] + "***"
+    else:
+        masked_local = local[0] + "***" + local[-1]
+    return f"{masked_local}@{domain}"
+
+
+def sanitize_header_value(val: str) -> str:
+    """Strip CR and LF to prevent email header injection attacks."""
+    if not val:
+        return ""
+    return re.sub(r"[\r\n]+", " ", str(val)).strip()
+
+
+def create_email_message(
+    to_email: str,
+    subject: str,
+    text_content: str,
+    html_content: str,
+    from_email: str,
+    from_name: str,
+    host: str,
+) -> EmailMessage:
+    """Build a standards-compliant (RFC 5322) multipart email with Date, Message-ID, and UTF-8 parts."""
+    clean_to = sanitize_header_value(to_email)
+    clean_subject = sanitize_header_value(subject)
+    clean_from_name = sanitize_header_value(from_name)
+    clean_from_email = sanitize_header_value(from_email)
+
+    msg = EmailMessage()
+    msg["Subject"] = clean_subject
+    msg["From"] = email.utils.formataddr((clean_from_name, clean_from_email))
+    msg["To"] = clean_to
+    msg["Date"] = email.utils.formatdate(localtime=False)
+    domain = host if "." in host else "localhost"
+    msg["Message-ID"] = email.utils.make_msgid(domain=domain)
+
+    # Set plain-text body and attach HTML alternative
+    msg.set_content(text_content, charset="utf-8")
+    msg.add_alternative(html_content, subtype="html", charset="utf-8")
+    return msg
 
 
 class Mailer(Protocol):
@@ -57,15 +201,17 @@ def diagnose_smtp_connection(
     password: Optional[str] = None,
     from_email: Optional[str] = None,
     to_email: Optional[str] = None,
-    timeout: float = 10.0,
+    timeout: float = 15.0,
 ) -> SmtpDiagnosticResult:
     """Perform step-by-step diagnostic test on SMTP connection, TLS handshake, and credentials."""
-    s_host = host or os.getenv("VRS_SMTP_HOST") or settings.smtp_host
-    s_port = int(port or os.getenv("VRS_SMTP_PORT") or settings.smtp_port)
-    s_sec = (security or os.getenv("VRS_SMTP_SECURITY") or settings.smtp_security or "starttls").lower()
-    s_user = username or os.getenv("VRS_SMTP_USERNAME") or settings.smtp_username
-    s_pwd = password or os.getenv("VRS_SMTP_PASSWORD") or settings.smtp_password
-    s_from = from_email or os.getenv("VRS_EMAIL_FROM") or settings.email_from or s_user
+    s_host = (host or os.getenv("VRS_SMTP_HOST") or settings.smtp_host or "").strip()
+    s_port = int(port or os.getenv("VRS_SMTP_PORT") or settings.smtp_port or 587)
+    s_sec = (security or os.getenv("VRS_SMTP_SECURITY") or settings.smtp_security or "starttls").lower().strip()
+    s_user = (username or os.getenv("VRS_SMTP_USERNAME") or settings.smtp_username or "").strip()
+    # Strip whitespace and surrounding quotes (Google App Passwords often pasted with spaces)
+    raw_pwd = password or os.getenv("VRS_SMTP_PASSWORD") or settings.smtp_password or ""
+    s_pwd = raw_pwd.strip().strip("'\"")
+    s_from = (from_email or os.getenv("VRS_EMAIL_FROM") or settings.email_from or s_user).strip()
 
     # Step 1: Configuration check
     if not (s_host and s_user and s_pwd):
@@ -157,7 +303,7 @@ def diagnose_smtp_connection(
             "If using Gmail:\n"
             "  1. Ensure 2-Step Verification is enabled on your Google Account.\n"
             "  2. Create a 16-character App Password at https://myaccount.google.com/apppasswords.\n"
-            "  3. Use the App Password (not your standard Google account password)."
+            "  3. Use the App Password without whitespace."
         )
         return SmtpDiagnosticResult(
             success=False,
@@ -181,12 +327,18 @@ def diagnose_smtp_connection(
     # Step 5: Optional Test Message
     if to_email:
         try:
-            msg = MIMEMultipart("alternative")
-            msg["From"] = f'"{settings.email_from_name}" <{s_from}>'
-            msg["To"] = to_email
-            msg["Subject"] = f"[{settings.email_from_name}] SMTP Test Diagnostic"
-            msg.attach(MIMEText("This is an automated diagnostic test message from VideoContextEngine.", "plain"))
-            server.sendmail(s_from, [to_email], msg.as_string())
+            msg = create_email_message(
+                to_email=to_email,
+                subject=f"[{settings.email_from_name}] SMTP Test Diagnostic",
+                text_content="This is an automated diagnostic test message from VideoContextEngine.",
+                html_content="<p>This is an automated diagnostic test message from VideoContextEngine.</p>",
+                from_email=s_from,
+                from_name=settings.email_from_name,
+                host=s_host,
+            )
+            refused = server.send_message(msg)
+            if refused:
+                raise smtplib.SMTPRecipientsRefused(refused)
         except smtplib.SMTPRecipientsRefused as rec_err:
             if server:
                 try: server.quit()
@@ -225,84 +377,147 @@ def diagnose_smtp_connection(
 
 
 class SmtpMailer:
-    """Production SMTP mailer with TLS/SSL, timeout, and diagnostic error reporting."""
+    """Hardened, unified production SMTP mailer with TLS/SSL, timeout, retry, and RFC 5322 compliance."""
 
-    def __init__(self, timeout: float = 10.0) -> None:
+    def __init__(self, timeout: float = 25.0) -> None:
         self.timeout = timeout
 
-    def _ensure_configured(self) -> None:
-        host = os.getenv("VRS_SMTP_HOST") if "VRS_SMTP_HOST" in os.environ else settings.smtp_host
-        user = os.getenv("VRS_SMTP_USERNAME") if "VRS_SMTP_USERNAME" in os.environ else settings.smtp_username
-        pwd = os.getenv("VRS_SMTP_PASSWORD") if "VRS_SMTP_PASSWORD" in os.environ else settings.smtp_password
+    def _ensure_configured(self) -> Tuple[str, int, str, str, str, str]:
+        host = (os.getenv("VRS_SMTP_HOST") if "VRS_SMTP_HOST" in os.environ else settings.smtp_host or "").strip()
+        user = (os.getenv("VRS_SMTP_USERNAME") if "VRS_SMTP_USERNAME" in os.environ else settings.smtp_username or "").strip()
+        raw_pwd = os.getenv("VRS_SMTP_PASSWORD") if "VRS_SMTP_PASSWORD" in os.environ else settings.smtp_password or ""
+        pwd = raw_pwd.strip().strip("'\"")
+
         if not (host and user and pwd):
             raise EmailConfigurationError(
                 "Email delivery isn't configured on this server. "
                 "Please configure SMTP credentials in .env according to docs/AUTH_SETUP.md."
             )
 
-    def _create_message(self, to_email: str, subject: str, text_content: str, html_content: str) -> MIMEMultipart:
-        msg = MIMEMultipart("alternative")
-        from_header = f'"{settings.email_from_name}" <{settings.email_from or settings.smtp_username}>'
-        msg["From"] = from_header
-        msg["To"] = to_email
-        msg["Subject"] = subject
+        port = int(os.getenv("VRS_SMTP_PORT") if "VRS_SMTP_PORT" in os.environ else settings.smtp_port or 587)
+        security = (os.getenv("VRS_SMTP_SECURITY") if "VRS_SMTP_SECURITY" in os.environ else settings.smtp_security or "starttls").lower().strip()
+        from_email = (os.getenv("VRS_EMAIL_FROM") if "VRS_EMAIL_FROM" in os.environ else settings.email_from or user).strip()
+        return host, port, security, user, pwd, from_email
 
-        part_text = MIMEText(text_content, "plain", "utf-8")
-        part_html = MIMEText(html_content, "html", "utf-8")
-        msg.attach(part_text)
-        msg.attach(part_html)
-        return msg
-
-    def _send(self, to_email: str, msg: MIMEMultipart) -> None:
-        self._ensure_configured()
+    def _send_single_attempt(
+        self,
+        to_email: str,
+        msg: EmailMessage,
+        host: str,
+        port: int,
+        security: str,
+        user: str,
+        pwd: str,
+    ) -> None:
         context = ssl.create_default_context()
-        security = (settings.smtp_security or "starttls").lower()
-
         server = None
         try:
+            t0 = time.perf_counter()
             if security == "ssl":
-                server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, context=context, timeout=self.timeout)
+                server = smtplib.SMTP_SSL(host, port, context=context, timeout=self.timeout)
             else:
-                server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=self.timeout)
+                server = smtplib.SMTP(host, port, timeout=self.timeout)
                 server.ehlo()
                 server.starttls(context=context)
                 server.ehlo()
 
-            server.login(settings.smtp_username, settings.smtp_password)
-            sender = settings.email_from or settings.smtp_username
-            server.sendmail(sender, [to_email], msg.as_string())
-        except EmailConfigurationError:
-            raise
-        except smtplib.SMTPAuthenticationError as auth_exc:
-            logger.error("SMTP Authentication Error (535): Invalid username or password: %s", auth_exc)
-            raise EmailDeliveryError(
-                "SMTP authentication failed (535): Bad credentials. If using Gmail, you must enable 2-Step Verification and use a 16-character Google App Password."
-            ) from auth_exc
-        except smtplib.SMTPResponseException as exc:
-            code = getattr(exc, "smtp_code", "unknown")
-            logger.error("SMTP response error: %s (code: %s)", type(exc).__name__, code)
-            raise EmailDeliveryError(f"SMTP error code {code}") from exc
-        except (socket.timeout, TimeoutError) as t_exc:
-            logger.error("SMTP connection timeout: %s", t_exc)
-            raise EmailDeliveryError("SMTP connection timed out. Check network connection and port settings.") from t_exc
-        except (ConnectionRefusedError, ConnectionResetError, OSError) as conn_exc:
-            logger.error("SMTP connection refused: %s", conn_exc)
-            raise EmailDeliveryError("Could not connect to SMTP server. Verify server host and port.") from conn_exc
-        except Exception as exc:
-            logger.error("Failed to deliver email: %s", type(exc).__name__)
-            raise EmailDeliveryError(f"Email delivery error: {type(exc).__name__}") from exc
+            t_tls = (time.perf_counter() - t0) * 1000
+            t_login_start = time.perf_counter()
+            server.login(user, pwd)
+            t_login = (time.perf_counter() - t_login_start) * 1000
+
+            t_send_start = time.perf_counter()
+            refused = server.send_message(msg)
+            t_send = (time.perf_counter() - t_send_start) * 1000
+
+            if refused:
+                logger.warning("SMTP server refused recipients for message: %s", list(refused.keys()))
+                raise smtplib.SMTPRecipientsRefused(refused)
+
+            logger.info(
+                "Successfully delivered message via SMTP to %s (tls_handshake=%.1fms, login=%.1fms, send=%.1fms)",
+                mask_email(to_email),
+                t_tls,
+                t_login,
+                t_send,
+            )
         finally:
             if server:
                 try:
                     server.quit()
                 except Exception:
-                    pass
+                    try:
+                        server.close()
+                    except Exception:
+                        pass
+
+    def _send_with_retry(self, to_email: str, msg: EmailMessage) -> None:
+        host, port, security, user, pwd, _ = self._ensure_configured()
+
+        for attempt in (1, 2):
+            try:
+                self._send_single_attempt(to_email, msg, host, port, security, user, pwd)
+                return
+            except EmailConfigurationError:
+                raise
+            except smtplib.SMTPAuthenticationError as auth_exc:
+                code = getattr(auth_exc, "smtp_code", 535)
+                logger.error("SMTP Authentication Error (%s): Bad credentials for user %s", code, mask_email(user))
+                raise EmailDeliveryError(
+                    "SMTP authentication failed (535): Bad credentials. If using Gmail, you must enable 2-Step Verification and use a 16-character Google App Password without spaces.",
+                    category=SmtpErrorCode.AUTH,
+                    smtp_code=code,
+                ) from auth_exc
+            except smtplib.SMTPRecipientsRefused as rec_exc:
+                logger.error("SMTP Recipient Refused for %s: %s", mask_email(to_email), rec_exc)
+                raise EmailDeliveryError(
+                    f"Recipient was refused by the mail server: {mask_email(to_email)}",
+                    category=SmtpErrorCode.RECIPIENT,
+                    smtp_code=550,
+                    refused_recipients=list(rec_exc.recipients.keys()) if hasattr(rec_exc, "recipients") else [to_email],
+                ) from rec_exc
+            except (smtplib.SMTPServerDisconnected, socket.timeout, TimeoutError) as transient_exc:
+                if attempt == 1:
+                    logger.warning("Transient SMTP error on attempt 1 (%s); retrying in 1.0s...", type(transient_exc).__name__)
+                    time.sleep(1.0)
+                    continue
+                logger.error("SMTP transient delivery failed after retry: %s", type(transient_exc).__name__)
+                cat = SmtpErrorCode.CONNECT if isinstance(transient_exc, (socket.timeout, TimeoutError)) else SmtpErrorCode.TRANSIENT
+                raise EmailDeliveryError(
+                    f"SMTP delivery failed: {type(transient_exc).__name__}",
+                    category=cat,
+                ) from transient_exc
+            except smtplib.SMTPResponseException as resp_exc:
+                code = getattr(resp_exc, "smtp_code", -1)
+                if attempt == 1 and (code in (421, 450, 451, 452) or (400 <= code < 500)):
+                    logger.warning("Transient SMTP response code %s on attempt 1; retrying in 1.0s...", code)
+                    time.sleep(1.0)
+                    continue
+                cat, code_val, _ = classify_smtp_exception(resp_exc)
+                logger.error("SMTP response error: code=%s, category=%s", code, cat)
+                raise EmailDeliveryError(
+                    f"SMTP server rejected message with code {code}",
+                    category=cat,
+                    smtp_code=code,
+                ) from resp_exc
+            except Exception as exc:
+                cat, code_val, _ = classify_smtp_exception(exc)
+                logger.error("Failed to deliver email: %s (category: %s)", type(exc).__name__, cat)
+                raise EmailDeliveryError(
+                    f"Email delivery error: {type(exc).__name__}",
+                    category=cat,
+                    smtp_code=code_val,
+                ) from exc
 
     def send_verification_email(self, to_email: str, code: str, ttl_minutes: int) -> None:
-        subject = f"{settings.email_from_name} Verification Code"
+        """Send verification code email with expiry and RFC 5322 compliance."""
+        host, _, _, user, _, from_email = self._ensure_configured()
+        from_name = settings.email_from_name or "VideoContextEngine"
+        subject = f"{from_name} Verification Code"
+
         text_body = (
             f"Hello,\n\n"
-            f"Your verification code for {settings.email_from_name} is:\n\n"
+            f"Your verification code for {from_name} is:\n\n"
             f"    {code}\n\n"
             f"This code will expire in {ttl_minutes} minutes.\n"
             f"If you did not request this verification, please ignore this email.\n"
@@ -322,15 +537,27 @@ class SmtpMailer:
     </div>
 </body>
 </html>"""
-        msg = self._create_message(to_email, subject, text_body, html_body)
-        self._send(to_email, msg)
+        msg = create_email_message(
+            to_email=to_email,
+            subject=subject,
+            text_content=text_body,
+            html_content=html_body,
+            from_email=from_email,
+            from_name=from_name,
+            host=host,
+        )
+        self._send_with_retry(to_email, msg)
 
     def send_security_notice(self, to_email: str) -> None:
-        subject = f"Security Notice: {settings.email_from_name} Account"
+        """Send security notification for duplicate registration attempt with RFC 5322 compliance."""
+        host, _, _, user, _, from_email = self._ensure_configured()
+        from_name = settings.email_from_name or "VideoContextEngine"
+        subject = f"Security Notice: {from_name} Account"
+
         text_body = (
             f"Hello,\n\n"
-            f"Someone recently attempted to create an account with this email address on {settings.email_from_name}.\n\n"
-            f"If this was you, please log in with your existing password or use Continue with Google.\n"
+            f"Someone recently attempted to create an account with this email address on {from_name}.\n\n"
+            f"If this was you, please return to the application and log in with your existing password, or use Continue with Google.\n"
             f"If you did not make this request, you can safely ignore this email — your account remains secure.\n"
         )
         html_body = f"""<!DOCTYPE html>
@@ -345,8 +572,16 @@ class SmtpMailer:
     </div>
 </body>
 </html>"""
-        msg = self._create_message(to_email, subject, text_body, html_body)
-        self._send(to_email, msg)
+        msg = create_email_message(
+            to_email=to_email,
+            subject=subject,
+            text_content=text_body,
+            html_content=html_body,
+            from_email=from_email,
+            from_name=from_name,
+            host=host,
+        )
+        self._send_with_retry(to_email, msg)
 
 
 # Default mailer instance & test override hook
